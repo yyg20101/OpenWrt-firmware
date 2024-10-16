@@ -38,5 +38,5 @@ echo "src-git $FEED_NAME $FEED_SOURCE" >> feeds.conf.default
 echo "已将 $FEED_NAME feed source 添加到 feeds.conf.default"
 
 # Add a feed source
-echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
+echo 'src-git helloworld https://github.com/fw876/helloworld.git' >>feeds.conf.default
 #echo 'src-git passwall https://github.com/xiaorouji/openwrt-passwall.git' >>feeds.conf.default
