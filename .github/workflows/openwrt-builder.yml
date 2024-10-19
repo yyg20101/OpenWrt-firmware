@@ -89,14 +89,6 @@ jobs:
     - name: Install feeds
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: Fix Rust
-      run: |
-        cd openwrt
-        sed -i 's/--set=llvm.download-ci-llvm=true/--set=source.crates-io.replace-with=mirror \\\
-        --set=source.mirror.registry=sparse+https:\/\/mirrors.bfsu.edu.cn\/crates.io-index\/ \\\
-        --set=llvm.download-ci-llvm=false/' package/feeds/packages/rust/Makefile
-        cat package/feeds/packages/rust/Makefile
-
     - name: Load custom configuration
       run: |
         [ -e files ] && mv files openwrt/files
