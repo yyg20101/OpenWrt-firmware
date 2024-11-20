@@ -22,10 +22,10 @@ sed -i '2isrc-git luci https://github.com/yyg20101/luci.git;openwrt-23.05' feeds
 REPO_URL="https://github.com/xiaorouji/openwrt-passwall.git"
 FEED_NAME="passwall"
 
-# 获取并过滤最新的 tag，只保留类似 4.78-3 格式的 tag
-LATEST_TAG=$(git ls-remote --tags --sort="v:refname" "$REPO_URL" | awk -F'/' '{print $3}' | grep -E '^[0-9]+\.[0-9]+(-[0-9]+)?$' | tail -n1)
+# 获取并过滤最新的 tag，排除包含 "smartdns" 的 tag
+LATEST_TAG=$(git ls-remote --tags --sort="v:refname" "$REPO_URL" | awk -F'/' '{print $3}' | grep -v 'smartdns' | tail -n1)
 # 指定tag版本
-#LATEST_TAG="4.78-2"
+#LATEST_TAG="4.78-4"
 
 # 判断是否成功获取到最新 tag
 if [ -z "$LATEST_TAG" ]; then
