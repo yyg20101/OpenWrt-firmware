@@ -41,7 +41,7 @@ fetch_code() {
   DEFAULT_BRANCH=${3:-main}  # 默认分支（如果未指定则使用 main）
 
   # 获取最新的 tag，排除包含 "smartdns" 的 tag
-  LATEST_TAG=$(git ls-remote --tags --sort="v:refname" "$REPO_URL" | awk -F'/' '{print $3}' | grep -v 'smartdns' | tail -n1)
+  LATEST_TAG=$(cd temp-repo && git for-each-ref --sort=-taggerdate --format '%(refname:strip=2)' refs/tags | grep -v 'smartdns' | head -n1)
 
   # 判断是否成功获取到最新 tag
   if [ -z "$LATEST_TAG" ]; then
