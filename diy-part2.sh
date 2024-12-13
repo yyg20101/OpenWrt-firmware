@@ -34,9 +34,40 @@ function git_sparse_clone() {
   cd .. && rm -rf $repodir
 }
 
+# 通用拉取代码方法
+fetch_code() {
+  REPO_URL=$1          # Git 仓库地址
+  TARGET_DIR=$2        # 拉取代码的目标路径
+  DEFAULT_BRANCH=${3:-main}  # 默认分支（如果未指定则使用 main）
+
+  # 获取最新的 tag，排除包含 "smartdns" 的 tag
+  LATEST_TAG=$(git ls-remote --tags --sort="v:refname" "$REPO_URL" | awk -F'/' '{print $3}' | grep -v 'smartdns' | tail -n1)
+
+  # 判断是否成功获取到最新 tag
+  if [ -z "$LATEST_TAG" ]; then
+    echo "未找到符合条件的 tag，使用默认分支: $DEFAULT_BRANCH"
+    BRANCH_OR_TAG=$DEFAULT_BRANCH
+  else
+    echo "最新的符合条件的 tag 是: $LATEST_TAG"
+    BRANCH_OR_TAG=$LATEST_TAG
+  fi
+
+  # 克隆仓库指定分支或 tag
+  echo "开始拉取代码，分支或 tag: $BRANCH_OR_TAG"
+  git clone --depth=1 --branch "$BRANCH_OR_TAG" "$REPO_URL" "$TARGET_DIR"
+
+  # 确认拉取结果
+  if [ $? -eq 0 ]; then
+    echo "代码已成功拉取到 $TARGET_DIR，版本: $BRANCH_OR_TAG"
+  else
+    echo "代码拉取失败，请检查仓库地址或网络连接。"
+    exit 1
+  fi
+}
+
 git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall-packages package/openwrt-passwall
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall package/luci-app-passwall
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall2 package/luci-app-passwall2
+fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "package/luci-app-passwall" "main"
+fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "package/luci-app-passwall2" "main"
 git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 
 ./scripts/feeds update -a
