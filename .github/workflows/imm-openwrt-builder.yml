@@ -155,12 +155,9 @@ jobs:
       if: steps.compile.outputs.status == 'success'
       run: |
         cd $OPENWRT_PATH/bin/targets/*/*
-        cat sha256sums
-        cp $OPENWRT_PATH/.config build.config
-        mv -f $OPENWRT_PATH/bin/packages/*/*/*.ipk packages
-        tar -zcf Packages.tar.gz packages
-        rm -rf packages feeds.buildinfo version.buildinfo
+        rm -rf packages
         echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload Firmware To Artifact(将固件上传到Artifact)
       if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE != 'true'
@@ -190,3 +187,18 @@ jobs:
           ### 🧊 固件版本
           - 固件编译前最后一次➦[主源码](${{ env.REPO_URL }})更新记录
           - ${{ env.VERSION_INFO }}
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        retain_days: 0
+        keep_minimum_runs: 2
+
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@master
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 3
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
