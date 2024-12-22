@@ -25,7 +25,7 @@ env:
   DIY_P2_SH: imm-diy-part2.sh
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
-  FIRMWARE_RELEASE: true
+  UPLOAD_RELEASE: true
   FIRMWARE_TAG: X86-64
   TZ: Asia/Shanghai
 
