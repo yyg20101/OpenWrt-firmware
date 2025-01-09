@@ -144,7 +144,7 @@ UPDATE_PACKAGE() {
 # 使用示例
 UPDATE_PACKAGE "passwall" "xiaorouji/openwrt-passwall" "main" "pkg"
 UPDATE_PACKAGE "ssr-plus" "fw876/helloworld" "master"
-UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "dev" "pkg"
+UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "master" "pkg"
 UPDATE_PACKAGE "alist" "sbwml/luci-app-alist" "main"
 
 ./scripts/feeds update -a
