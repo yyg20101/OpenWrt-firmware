@@ -77,7 +77,6 @@ fetch_code() {
     exit 1
   fi
 }
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall-packages package/openwrt-passwall
 fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "package/luci-app-passwall" "main"
 fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "package/luci-app-passwall2" "main"
 git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
