@@ -43,6 +43,7 @@
 
 # Add a feed source
 #echo 'src-git helloworld https://github.com/fw876/helloworld.git' >>feeds.conf.default
+echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git" >> feeds.conf.default
 
 #取消nss相关feed
 echo "CONFIG_FEED_nss_packages=n" >> ./.config
