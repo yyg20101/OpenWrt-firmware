@@ -87,13 +87,41 @@ jobs:
         DEVICE_SUBTARGET=$(cat .config | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
 
-    - name: Cache Toolchain(缓存工具链)
+    - name: Check Caches
+      id: check-cache
       if: env.CACHE_TOOLCHAIN == 'true'
-      uses: HiGarfield/cachewrtbuild@main
+      uses: actions/cache@main
       with:
-        ccache: false
-        mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
-        prefix: ${{ env.OPENWRT_PATH }}
+        key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
+        restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}
+        path: |
+          ./openwrt/.ccache
+          ./openwrt/staging_dir/host*
+          ./openwrt/staging_dir/tool*
+
+    - name: Update Caches
+      if: env.CACHE_TOOLCHAIN == 'true'
+      run: |
+        if [ -d "./openwrt/staging_dir" ]; then
+          find "./openwrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
+            find "$DIR" -type f -exec touch {} +
+          done
+
+          mkdir -p ./openwrt/tmp && echo "1" > ./openwrt/tmp/.build
+
+          echo "toolchain skiped done!"
+        else
+          echo "caches missed!"
+        fi
+
+        if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
+          CACHE_LIST=$(gh cache list --key "$SOURCE_REPO-$REPO_BRANCH-$DEVICE_TARGET" | cut -f 1)
+          for CACHE_KEY in $CACHE_LIST; do
+             gh cache delete $CACHE_KEY
+          done
+
+          echo "caches cleanup done!"
+        fi
     
     - name: Load custom feeds
       run: |
