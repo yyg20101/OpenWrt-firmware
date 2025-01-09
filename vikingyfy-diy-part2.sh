@@ -118,15 +118,15 @@ UPDATE_PACKAGE() {
 
   # 克隆仓库指定分支或 tag
   echo "开始拉取代码，分支或 tag: $BRANCH_OR_TAG"
-  git clone --depth=1 --branch "$BRANCH_OR_TAG" "$REPO_URL" "$REPO_NAME"
+  git clone --depth=1 --branch "$BRANCH_OR_TAG" "$REPO_URL"
 
   # 根据特殊处理类型进行处理
   if [ "$PKG_SPECIAL" = "pkg" ]; then
-    echo "提取包名插件: $PKG_NAME"
+    echo "提取包名插件: $REPO_NAME"
     find ./$REPO_NAME -maxdepth 3 -type d -name "*$PKG_NAME*" -exec cp -rf {} ./ \;
     rm -rf ./$REPO_NAME/
   elif [ "$PKG_SPECIAL" = "name" ]; then
-    echo "重命名包: $PKG_NAME"
+    echo "重命名包: $REPO_NAME to $PKG_NAME"
     mv -f $REPO_NAME $PKG_NAME
   fi
 
