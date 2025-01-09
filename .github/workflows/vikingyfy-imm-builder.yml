@@ -21,7 +21,7 @@ env:
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: vikingyfy.config
-  DIY_P1_SH: imm-diy-part1.sh
+  DIY_P1_SH: vikingyfy-diy-part1.sh
   DIY_P2_SH: vikingyfy-diy-part2.sh
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
