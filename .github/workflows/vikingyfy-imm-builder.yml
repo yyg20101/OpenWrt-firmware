@@ -17,8 +17,8 @@ on:
   workflow_dispatch:
 
 env:
-  REPO_URL: https://github.com/laipeng668/immortalwrt
-  REPO_BRANCH: openwrt-24.10
+  REPO_URL: https://github.com/VIKINGYFY/immortalwrt
+  REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: vikingyfy.config
   DIY_P1_SH: vikingyfy-diy-part1.sh
