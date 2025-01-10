@@ -35,14 +35,6 @@ jobs:
 
     steps:
     
-    - name: Maximize Build Space
-      uses: easimon/maximize-build-space@master
-      with:
-        swap-size-mb: 1024
-        temp-reserve-mb: 100
-        root-reserve-mb: 1024
-        build-mount-path: '/workdir'
-    
     - name: Checkout
       uses: actions/checkout@main
 
@@ -60,6 +52,14 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
+
+    - name: Maximize Build Space
+      uses: easimon/maximize-build-space@master
+      with:
+        swap-size-mb: 1024
+        temp-reserve-mb: 100
+        root-reserve-mb: 1024
+        build-mount-path: '/workdir'
 
     - name: Clone Source Code(克隆源代码)
       working-directory: /workdir
