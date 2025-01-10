@@ -20,9 +20,9 @@ env:
   REPO_URL: https://github.com/LiBwrt/openwrt-6.x
   REPO_BRANCH: kernel-6.12
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: vikingyfy.config
-  DIY_P1_SH: vikingyfy-diy-part1.sh
-  DIY_P2_SH: vikingyfy-diy-part2.sh
+  CONFIG_FILE: qualcommax.config
+  DIY_P1_SH: qualcommax-diy-part1.sh
+  DIY_P2_SH: qualcommax-diy-part2.sh
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
