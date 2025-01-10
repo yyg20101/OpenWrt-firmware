@@ -142,10 +142,10 @@ UPDATE_PACKAGE() {
 # 如果需要支持其他包，只需再次调用 UPDATE_PACKAGE
 # UPDATE_PACKAGE "包名" "项目地址" "默认分支" "pkg/name"
 # 使用示例
-# UPDATE_PACKAGE "passwall" "xiaorouji/openwrt-passwall" "main" "pkg"
-# UPDATE_PACKAGE "ssr-plus" "fw876/helloworld" "master"
-# UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "master" "pkg"
-# UPDATE_PACKAGE "alist" "sbwml/luci-app-alist" "main"
+UPDATE_PACKAGE "passwall" "xiaorouji/openwrt-passwall" "main" "pkg"
+UPDATE_PACKAGE "ssr-plus" "fw876/helloworld" "master"
+UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "master" "pkg"
+UPDATE_PACKAGE "alist" "sbwml/luci-app-alist" "main"
 
 ./scripts/feeds update -a
 ./scripts/feeds install -a
