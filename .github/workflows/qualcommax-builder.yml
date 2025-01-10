@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: VIKINGYFY Imm OpenWrt Builder
+name: Qualcommax OpenWrt Builder
 
 on:
   repository_dispatch:
