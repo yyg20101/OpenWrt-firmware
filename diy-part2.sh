@@ -27,6 +27,7 @@
 rm -rf feeds/luci/applications/luci-app-passwall
 rm -rf feeds/luci/applications/luci-app-passwall2
 rm -rf feeds/luci/applications/luci-app-openclash
+rm -rf feeds/luci/applications/luci-app-alist
 
 # Git稀疏克隆，只克隆指定目录到本地
 function git_sparse_clone() {
@@ -79,6 +80,7 @@ fetch_code() {
 }
 fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "package/luci-app-passwall" "main"
 fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "package/luci-app-passwall2" "main"
+fetch_code "https://github.com/sbwml/luci-app-alist.git" "package/uci-app-alist" "main"
 git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 
 # # 安装和更新软件包
