@@ -135,5 +135,5 @@ fetch_code "https://github.com/sbwml/luci-app-alist.git" "feeds/luci/application
 # UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "master" "pkg"
 # UPDATE_PACKAGE "alist" "sbwml/luci-app-alist" "main"
 
-./scripts/feeds update -a
+# ./scripts/feeds update -a
 ./scripts/feeds install -a
