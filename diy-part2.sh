@@ -67,9 +67,9 @@ fetch_code() {
     exit 1
   fi
 }
-fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "package/luci-app-passwall" "main"
-fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "package/luci-app-passwall2" "main"
-fetch_code "https://github.com/sbwml/luci-app-alist.git" "package/uci-app-alist" "main"
+fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "feeds/luci/applications/luci-app-passwall" "main"
+fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "feeds/luci/applications/luci-app-passwall2" "main"
+fetch_code "https://github.com/sbwml/luci-app-alist.git" "feeds/luci/applications/luci-app-alist" "main"
 
 # # 安装和更新软件包
 # UPDATE_PACKAGE() {
