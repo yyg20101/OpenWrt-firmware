@@ -26,18 +26,7 @@
 # 移除要替换的包
 rm -rf feeds/luci/applications/luci-app-passwall
 rm -rf feeds/luci/applications/luci-app-passwall2
-rm -rf feeds/luci/applications/luci-app-openclash
 rm -rf feeds/luci/applications/luci-app-alist
-
-# Git稀疏克隆，只克隆指定目录到本地
-function git_sparse_clone() {
-  branch="$1" repourl="$2" && shift 2
-  git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
-  repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
-  cd $repodir && git sparse-checkout set $@
-  mv -f $@ ../package
-  cd .. && rm -rf $repodir
-}
 
 # 通用拉取代码方法
 fetch_code() {
@@ -81,7 +70,6 @@ fetch_code() {
 fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "package/luci-app-passwall" "main"
 fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "package/luci-app-passwall2" "main"
 fetch_code "https://github.com/sbwml/luci-app-alist.git" "package/uci-app-alist" "main"
-git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 
 # # 安装和更新软件包
 # UPDATE_PACKAGE() {
