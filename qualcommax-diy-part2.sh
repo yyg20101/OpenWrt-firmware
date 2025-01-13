@@ -133,7 +133,7 @@ fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "luci-app-passwal
 # UPDATE_PACKAGE "alist" "sbwml/luci-app-alist" "main"
 
 #coremark修复
-sed -i 's/mkdir \$(PKG_BUILD_DIR)\/\$(ARCH)/mkdir -p \$(PKG_BUILD_DIR)\/\$(ARCH)/g' ../feeds/packages/utils/coremark/Makefile
+# sed -i 's/mkdir \$(PKG_BUILD_DIR)\/\$(ARCH)/mkdir -p \$(PKG_BUILD_DIR)\/\$(ARCH)/g' ../feeds/packages/utils/coremark/Makefile
 
 # ./scripts/feeds update -a
 ./scripts/feeds install -a
