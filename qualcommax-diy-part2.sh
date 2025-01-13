@@ -23,26 +23,14 @@
 #rm -rf feeds/packages/lang/golang
 #git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
 
-# 移除要替换的包
-rm -rf feeds/luci/applications/luci-app-passwall
-rm -rf feeds/luci/applications/luci-app-passwall2
-rm -rf feeds/luci/applications/luci-app-openclash
-
-# Git稀疏克隆，只克隆指定目录到本地
-function git_sparse_clone() {
-  branch="$1" repourl="$2" && shift 2
-  git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
-  repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
-  cd $repodir && git sparse-checkout set $@
-  mv -f $@ ../package
-  cd .. && rm -rf $repodir
-}
-
 # 通用拉取代码方法
 fetch_code() {
   REPO_URL=$1          # Git 仓库地址
   TARGET_DIR=$2        # 拉取代码的目标路径
   DEFAULT_BRANCH=${3:-main}  # 默认分支（如果未指定则使用 main）
+
+  rm -rf feeds/luci/applications/$TARGET_DIR
+  rm -rf package/feeds/luci/$TARGET_DIR
 
   # 创建临时目录以获取仓库信息
   TEMP_DIR=$(mktemp -d)
@@ -67,7 +55,7 @@ fetch_code() {
 
   # 克隆仓库指定分支或 tag
   echo "开始拉取代码，分支或 tag: $BRANCH_OR_TAG"
-  git clone --depth=1 --branch "$BRANCH_OR_TAG" "$REPO_URL" "$TARGET_DIR"
+  git clone --depth=1 --branch "$BRANCH_OR_TAG" "$REPO_URL" "feeds/luci/applications/$TARGET_DIR"
 
   # 确认拉取结果
   if [ $? -eq 0 ]; then
@@ -77,10 +65,7 @@ fetch_code() {
     exit 1
   fi
 }
-git clone --depth=1 https://github.com/xiaorouji/openwrt-passwall-packages package/openwrt-passwall
-fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "package/luci-app-passwall" "main"
-fetch_code "https://github.com/xiaorouji/openwrt-passwall2.git" "package/luci-app-passwall2" "main"
-git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
+fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "luci-app-passwall" "main"
 
 # # 安装和更新软件包
 # UPDATE_PACKAGE() {
