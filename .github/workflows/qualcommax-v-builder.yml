@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: Qualcommax OpenWrt Builder
+name: Qualcommax V OpenWrt Builder
 
 on:
   repository_dispatch:
