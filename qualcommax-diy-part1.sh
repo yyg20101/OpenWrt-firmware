@@ -45,21 +45,6 @@
 # echo 'src-git helloworld https://github.com/fw876/helloworld.git' >>feeds.conf.default
 echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git" >> feeds.conf.default
 
-# 提取最终地址部分
-REPO_NAME=$(echo "$REPO_URL" | awk -F'/' '{print $NF}')
-
-# 检查提取的地址是否是 immortalwrt
-if [ "$REPO_NAME" = "immortalwrt" ]; then
-  echo "仓库地址是 immortalwrt，无需添加 wwan_packages 源。"
-else
-  echo "仓库地址不是 immortalwrt，添加 wwan_packages 源到 feeds.conf.default..."
-  
-  # 追加 wwan_packages 源到 feeds.conf.default
-  echo "src-git wwan_packages https://github.com/immortalwrt/wwan-packages.git" >> feeds.conf.default
-  
-  echo "添加完成。"
-fi
-
 #取消nss相关feed
 # echo "CONFIG_FEED_nss_packages=n" >> ./.config
 # echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
