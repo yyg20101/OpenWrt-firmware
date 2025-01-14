@@ -65,7 +65,7 @@ fetch_code() {
     exit 1
   fi
 }
-# fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "luci-app-passwall" "main"
+fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "luci-app-passwall" "main"
 
 # ./scripts/feeds update -a
 ./scripts/feeds install -a
