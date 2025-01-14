@@ -99,7 +99,7 @@ fetch_code "https://github.com/xiaorouji/openwrt-passwall.git" "luci-app-passwal
 
 #   # 删除可能存在的旧版本包
 #   echo "清理旧版本包: $PKG_NAME"
-#   find ./ ../feeds/luci/ ../feeds/packages/ -maxdepth 3 -type d -name "*$PKG_NAME*" -exec rm -rf {} +
+#   find ./ feeds/luci/ feeds/packages/ -maxdepth 3 -type d -name "*$PKG_NAME*" -exec rm -rf {} +
 
 #   # 克隆仓库指定分支或 tag
 #   echo "开始拉取代码，分支或 tag: $BRANCH_OR_TAG"
