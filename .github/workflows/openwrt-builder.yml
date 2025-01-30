@@ -70,7 +70,6 @@ jobs:
 
     - name: Generate Variables(生成变量)
       run: |
-        echo "$PWD"
         cp $CONFIG_FILE $OPENWRT_PATH/.config
         cd $OPENWRT_PATH
         make defconfig > /dev/null 2>&1
@@ -90,9 +89,9 @@ jobs:
         
     - name: Cache Toolchain(缓存工具链)
       if: env.CACHE_TOOLCHAIN == 'true'
-      uses: stupidloud/cachewrtbuild@main
+      uses: HiGarfield/cachewrtbuild@main
       with:
-        ccache: 'true'
+        ccache: false
         mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
 
