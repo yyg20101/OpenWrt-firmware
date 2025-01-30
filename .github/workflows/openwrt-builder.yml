@@ -34,9 +34,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    
-    - name: Checkout
-      uses: actions/checkout@main
 
     - name: Initialization environment
       env:
@@ -59,6 +56,9 @@ jobs:
         temp-reserve-mb: 100
         root-reserve-mb: 1024
 
+    - name: Checkout
+      uses: actions/checkout@main
+
     - name: Clone Source Code(克隆源代码)
       run: |
         df -hT $GITHUB_WORKSPACE
@@ -70,6 +70,7 @@ jobs:
 
     - name: Generate Variables(生成变量)
       run: |
+        echo "$PWD"
         cp $CONFIG_FILE $OPENWRT_PATH/.config
         cd $OPENWRT_PATH
         make defconfig > /dev/null 2>&1
