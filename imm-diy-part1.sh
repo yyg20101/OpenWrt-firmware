@@ -41,6 +41,14 @@
 
 #echo "已将 $FEED_NAME feed source 添加到 feeds.conf.default"
 
+# GitHub Action 移除国内下载源
+PROJECT_MIRRORS_FILE="scripts/projectsmirrors.json"
+
+if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+    echo "find PROJECT_MIRRORS_FILE -------------------------------"
+    sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+fi
+
 # Add a feed source
 #echo 'src-git helloworld https://github.com/fw876/helloworld.git' >>feeds.conf.default
 #echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git" >> feeds.conf.default
