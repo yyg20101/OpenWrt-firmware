@@ -51,3 +51,10 @@ echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-pa
 #设置NSS版本
 # echo "CONFIG_NSS_FIRMWARE_VERSION_11_4=n" >> .config
 # echo "CONFIG_NSS_FIRMWARE_VERSION_12_2=y" >> .config
+
+# GitHub Action 移除国内下载源
+PROJECT_MIRRORS_FILE="scripts/projectsmirrors.json"
+
+if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+    sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+fi
