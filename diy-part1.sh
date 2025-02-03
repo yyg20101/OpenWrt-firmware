@@ -49,6 +49,5 @@ echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-pa
 PROJECT_MIRRORS_FILE="scripts/projectsmirrors.json"
 
 if [ -f "$PROJECT_MIRRORS_FILE" ]; then
-    echo "find PROJECT_MIRRORS_FILE -------------------------------"
     sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
 fi
