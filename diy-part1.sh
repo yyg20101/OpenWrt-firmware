@@ -51,3 +51,6 @@ PROJECT_MIRRORS_FILE="scripts/projectsmirrors.json"
 if [ -f "$PROJECT_MIRRORS_FILE" ]; then
     sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
 fi
+
+sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/download.pl
+sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/download.pl
