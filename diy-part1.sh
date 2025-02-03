@@ -53,4 +53,3 @@ if [ -f "$PROJECT_MIRRORS_FILE" ]; then
 fi
 
 sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/download.pl
-sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/download.pl
