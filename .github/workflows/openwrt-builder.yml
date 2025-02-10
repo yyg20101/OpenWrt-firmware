@@ -1,9 +1,10 @@
 name: OpenWrt Builder
+run-name: Build - ${{ inputs.model }}
 
 on:
   workflow_dispatch:
     inputs:
-      device_profile:
+      model:
         description: '选择设备配置'
         required: true
         default: 'x86_64_LEDE'
@@ -62,7 +63,7 @@ jobs:
       - name: Load Device Config
         run: |
           # 设置设备目录路径
-          DEVICE_PATH="devices/${{ inputs.device_profile }}"
+          DEVICE_PATH="devices/${{ inputs.model }}"
           echo "DEVICE_PATH=$DEVICE_PATH" >> $GITHUB_ENV
 
           # 加载设备配置
