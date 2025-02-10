@@ -12,58 +12,29 @@ on:
           - x86_64
           - raspberry_pi4
 
+# 基础配置（公共参数）
 env:
-  # 基础配置（公共参数）
-  BASE_CONFIG: |
-    REPO_URL: https://github.com/coolsnowwolf/lede
-    REPO_BRANCH: master
-    FEEDS_CONF: feeds.conf.default
-    DIY_P1_SH: diy-part1.sh
-    DIY_P2_SH: diy-part2.sh
-    CACHE_TOOLCHAIN: true
-    UPLOAD_BIN_DIR: false
-    TZ: Asia/Shanghai
-
-  # 设备专属配置（按需扩展）
-  DEVICE_PROFILES: |
-    {
-      "x86_64": {
-        "CONFIG_FILE": "x86_64.config",
-        "EXTEND_DRIVER": true,
-        "FIRMWARE_TAG": "X86-64"
-      },
-      "raspberry_pi4": {
-        "CONFIG_FILE": "bcm2711.config",
-        "EXTEND_DRIVER": false,
-        "FIRMWARE_TAG": "RPi4",
-        "REPO_BRANCH": "openwrt-23.05"
-      }
-    }
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+  FEEDS_CONF: feeds.conf.default
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+  CACHE_TOOLCHAIN: true
+  UPLOAD_BIN_DIR: false
+  TZ: Asia/Shanghai
 
 jobs:
   Build:
     runs-on: ubuntu-22.04
     steps:
-      - name: Setup Device Profile
-        id: setup
+    
+      - name: Load Device Config
         run: |
-          # 解析设备配置
-          DEVICE_JSON=$(echo '${{ env.DEVICE_PROFILES }}' | jq -r .${{ inputs.device_profile }})
+          # 如果设备配置文件存在，则加载覆盖默认配置
+          if [ -f "devices/${{ inputs.device_profile }}/env" ]; then
+            cat "devices/${{ inputs.device_profile }}/env" >> $GITHUB_ENV
+          fi
           
-          # 合并基础配置与设备专属配置
-          COMBINED_CONFIG=$(jq -n \
-            --argjson base "$(echo '${{ env.BASE_CONFIG }}' | jq -R 'fromjson?')" \
-            --argjson device "$DEVICE_JSON" \
-            '$base * $device')
-          
-          # 导出环境变量
-          echo "COMBINED_CONFIG<<EOF" >> $GITHUB_ENV
-          echo "$COMBINED_CONFIG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-          # 动态设置参数
-          jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' <<< "$COMBINED_CONFIG" >> $GITHUB_ENV
-
       - name: Initialization environment
         env:
           DEBIAN_FRONTEND: noninteractive
