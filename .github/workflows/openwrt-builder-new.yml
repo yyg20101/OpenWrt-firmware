@@ -25,7 +25,7 @@ env:
     TZ: Asia/Shanghai
 
   # 设备专属配置（按需扩展）
-  DEVICE_PROFILES: |
+  DEVICE_PROFILES: >
     {
       "x86_64": {
         "CONFIG_FILE": "x86_64.config",
