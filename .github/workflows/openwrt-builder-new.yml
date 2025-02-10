@@ -52,6 +52,8 @@ jobs:
               var_name="$(echo -n "$var_name" | xargs)"
               var_value="$(echo -n "$var_value" | xargs)"
           
+              echo "print $var_name: $var_value"
+          
               # 处理路径变量
               case "$var_name" in
                 CONFIG_FILE|DIY_P1_SH|DIY_P2_SH|FEEDS_CONF)
