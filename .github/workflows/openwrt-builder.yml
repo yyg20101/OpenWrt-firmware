@@ -69,9 +69,17 @@ jobs:
         VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
         echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
 
-    - name: Generate Variables(生成变量)
+    - name: Load config
       run: |
         cp $CONFIG_FILE $OPENWRT_PATH/.config
+
+    - name: Extend Driver
+      if: env.EXTEND_DRIVER == 'true'
+      run: |
+        cat Driver.config >> $OPENWRT_PATH/.config
+
+    - name: Generate Variables(生成变量)
+      run: |
         cd $OPENWRT_PATH
         make defconfig > /dev/null 2>&1
         SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
@@ -109,11 +117,6 @@ jobs:
         chmod +x $DIY_P2_SH
         cd $OPENWRT_PATH
         $GITHUB_WORKSPACE/$DIY_P2_SH
-
-    - name: Extend Driver
-      if: env.EXTEND_DRIVER == 'true'
-      run: |
-        cat Driver.config >> $OPENWRT_PATH/.config
 
     - name: Download DL Package(下载DL软件包)
       run: |
