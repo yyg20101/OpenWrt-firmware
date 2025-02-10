@@ -6,11 +6,11 @@ on:
       device_profile:
         description: '选择设备配置'
         required: true
-        default: 'x86_64'
+        default: 'x86_64_LEDE'
         type: choice
         options:
-          - x86_64
-          - raspberry_pi4
+          - x86_64_LEDE
+          - x86_64_immortalWrt
 
 # 基础配置（公共参数）
 env:
@@ -27,12 +27,30 @@ jobs:
   Build:
     runs-on: ubuntu-22.04
     steps:
-    
+
       - name: Load Device Config
         run: |
-          # 如果设备配置文件存在，则加载覆盖默认配置
-          if [ -f "devices/${{ inputs.device_profile }}/env" ]; then
-            cat "devices/${{ inputs.device_profile }}/env" >> $GITHUB_ENV
+          DEVICE_PATH="devices/${{ inputs.device_profile }}"
+          # 加载设备配置
+          if [ -f "$DEVICE_PATH/env" ]; then
+            # 读取env文件并处理路径
+            while IFS= read -r line || [[ -n "$line" ]]; do
+              if [[ $line == CONFIG_FILE=* ]] || \
+                 [[ $line == DIY_P1_SH=* ]] || \
+                 [[ $line == DIY_P2_SH=* ]] || \
+                 [[ $line == FEEDS_CONF=* ]]; then
+                # 提取变量名和值
+                var_name="${line%%=*}"
+                var_value="${line#*=}"
+                # 移除引号
+                var_value="${var_value#\"}"
+                var_value="${var_value%\"}"
+                # 添加设备目录前缀
+                echo "$var_name=$DEVICE_PATH/$var_value" >> $GITHUB_ENV
+              else
+                echo "$line" >> $GITHUB_ENV
+              fi
+            done < "$DEVICE_PATH/env"
           fi
           
       - name: Initialization environment
