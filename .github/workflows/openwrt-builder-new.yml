@@ -32,6 +32,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
+      - name: Checkout
+        uses: actions/checkout@main
+        
       - name: Load Device Config
         run: |
           # 设置设备目录路径
