@@ -52,6 +52,8 @@ jobs:
 
           echo 'DEVICE_PROFILES is ${{ env.DEVICE_PROFILES }}'
 
+          echo 'device_profile is ${{ inputs.device_profile }}'
+          
           echo 'DEVICE_JSON is ${{ env.DEVICE_JSON }}'
           
           # 合并基础配置与设备专属配置
