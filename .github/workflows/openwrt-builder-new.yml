@@ -47,28 +47,38 @@ jobs:
       - name: Setup Device Profile
         id: setup
         run: |
-          # 解析设备配置
-          DEVICE_JSON=$(echo '${{ env.DEVICE_PROFILES }}' | jq -r .${{ inputs.device_profile }})
-
-          echo 'DEVICE_PROFILES is ${{ env.DEVICE_PROFILES }}'
-
-          echo 'device_profile is ${{ inputs.device_profile }}'
+          echo "Parsing DEVICE_PROFILES..."
+          echo "Raw DEVICE_PROFILES: '${{ env.DEVICE_PROFILES }}'"
           
-          echo 'DEVICE_JSON is ${{ env.DEVICE_JSON }}'
+          # 解析 JSON，确保格式正确
+          DEVICE_JSON=$(echo '${{ env.DEVICE_PROFILES }}' | jq -c --arg device "${{ inputs.device_profile }}" '.[$device]')
+          
+          if [ -z "$DEVICE_JSON" ] || [ "$DEVICE_JSON" == "null" ]; then
+            echo "Error: Failed to parse device profile for '${{ inputs.device_profile }}'."
+            echo "Check DEVICE_PROFILES JSON format."
+            exit 1
+          fi
+          
+          echo "Parsed DEVICE_JSON: $DEVICE_JSON"
+          
+          # 解析 BASE_CONFIG，防止 JSON 格式错误
+          BASE_JSON=$(echo '${{ env.BASE_CONFIG }}' | jq -R 'fromjson? // {}')
+          if [ -z "$BASE_JSON" ] || [ "$BASE_JSON" == "null" ]; then
+            echo "Error: BASE_CONFIG is not valid JSON."
+            exit 1
+          fi
           
           # 合并基础配置与设备专属配置
-          COMBINED_CONFIG=$(jq -n \
-            --argjson base "$(echo '${{ env.BASE_CONFIG }}' | jq -R 'fromjson?')" \
-            --argjson device "$DEVICE_JSON" \
-            '$base * $device')
+          COMBINED_CONFIG=$(jq -n --argjson base "$BASE_JSON" --argjson device "$DEVICE_JSON" '$base * $device')
+          echo "Final COMBINED_CONFIG: $COMBINED_CONFIG"
           
           # 导出环境变量
           echo "COMBINED_CONFIG<<EOF" >> $GITHUB_ENV
           echo "$COMBINED_CONFIG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+          
           # 动态设置参数
-          jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' <<< "$COMBINED_CONFIG" >> $GITHUB_ENV
+          echo "$COMBINED_CONFIG" | jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' >> $GITHUB_ENV
 
       - name: Initialization environment
         env:
