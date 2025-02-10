@@ -11,6 +11,9 @@ on:
         options:
           - x86_64_LEDE
           - x86_64_immortalWrt
+          - Qualcommax_LEDE
+          - Qualcommax_V
+          - Qualcommax_B
 
 # 基础配置（公共参数）
 env:
