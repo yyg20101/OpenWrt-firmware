@@ -89,13 +89,6 @@ jobs:
               esac
             done < "$DEVICE_PATH/env"
           fi
-
-          # 重新加载 GitHub Actions 环境变量
-          echo "CONFIG_FILE=${{ env.CONFIG_FILE }}"
-          echo "FEEDS_CONF=${{ env.FEEDS_CONF }}"
-          echo "DIY_P1_SH=${{ env.DIY_P1_SH }}"
-          echo "DIY_P2_SH=${{ env.DIY_P2_SH }}"
-          echo "Device path: $DEVICE_PATH"
   
       - name: Clone Source Code(克隆源代码)
         run: |
