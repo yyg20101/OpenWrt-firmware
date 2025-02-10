@@ -14,7 +14,7 @@ on:
 
 env:
   # 基础配置（公共参数）
-  BASE_CONFIG: 
+  BASE_CONFIG: |
     REPO_URL: https://github.com/coolsnowwolf/lede
     REPO_BRANCH: master
     FEEDS_CONF: feeds.conf.default
