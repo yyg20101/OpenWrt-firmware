@@ -31,52 +31,6 @@ jobs:
   Build:
     runs-on: ubuntu-22.04
     steps:
-
-      - name: Checkout
-        uses: actions/checkout@main
-        
-      - name: Load Device Config
-        run: |
-          # 设置设备目录路径
-          DEVICE_PATH="devices/${{ inputs.device_profile }}"
-          echo "DEVICE_PATH=$DEVICE_PATH" >> $GITHUB_ENV
-          
-          # 加载设备配置
-          if [ -f "$DEVICE_PATH/env" ]; then
-            while IFS= read -r line || [[ -n "$line" ]]; do
-              # 跳过空行和注释
-              [[ -z "$line" || "$line" =~ ^# ]] && continue
-          
-              # 解析变量名和值（以: 分割）
-              var_name="${line%%:*}"
-              var_value="${line#*:}"
-          
-              # 去除可能的前后空格
-              var_name="$(echo -n "$var_name" | xargs)"
-              var_value="$(echo -n "$var_value" | xargs)"
-          
-              echo "print $var_name: $var_value"
-          
-              # 处理路径变量
-              case "$var_name" in
-                CONFIG_FILE|DIY_P1_SH|DIY_P2_SH|FEEDS_CONF)
-                  resolved_path="$DEVICE_PATH/$var_value"
-                  echo "$var_name=$resolved_path" >> $GITHUB_ENV
-                  echo "Resolved $var_name: $resolved_path"
-                  ;;
-                *)
-                  echo "$var_name=$var_value" >> $GITHUB_ENV
-                  ;;
-              esac
-            done < "$DEVICE_PATH/env"
-          fi
-          
-          # 重新加载 GitHub Actions 环境变量
-          echo "CONFIG_FILE=${{ env.CONFIG_FILE }}"
-          echo "FEEDS_CONF=${{ env.FEEDS_CONF }}"
-          echo "DIY_P1_SH=${{ env.DIY_P1_SH }}"
-          echo "DIY_P2_SH=${{ env.DIY_P2_SH }}"
-          echo "Device path: $DEVICE_PATH"
           
       - name: Initialization environment
         env:
@@ -101,6 +55,47 @@ jobs:
   
       - name: Checkout
         uses: actions/checkout@main
+
+      - name: Load Device Config
+        run: |
+          # 设置设备目录路径
+          DEVICE_PATH="devices/${{ inputs.device_profile }}"
+          echo "DEVICE_PATH=$DEVICE_PATH" >> $GITHUB_ENV
+
+          # 加载设备配置
+          if [ -f "$DEVICE_PATH/env" ]; then
+            while IFS= read -r line || [[ -n "$line" ]]; do
+              # 跳过空行和注释
+              [[ -z "$line" || "$line" =~ ^# ]] && continue
+
+              # 解析变量名和值（以: 分割）
+              var_name="${line%%:*}"
+              var_value="${line#*:}"
+
+              # 去除可能的前后空格
+              var_name="$(echo -n "$var_name" | xargs)"
+              var_value="$(echo -n "$var_value" | xargs)"
+
+              # 处理路径变量
+              case "$var_name" in
+                CONFIG_FILE|DIY_P1_SH|DIY_P2_SH|FEEDS_CONF)
+                  resolved_path="$DEVICE_PATH/$var_value"
+                  echo "$var_name=$resolved_path" >> $GITHUB_ENV
+                  echo "Resolved $var_name: $resolved_path"
+                  ;;
+                *)
+                  echo "$var_name=$var_value" >> $GITHUB_ENV
+                  ;;
+              esac
+            done < "$DEVICE_PATH/env"
+          fi
+
+          # 重新加载 GitHub Actions 环境变量
+          echo "CONFIG_FILE=${{ env.CONFIG_FILE }}"
+          echo "FEEDS_CONF=${{ env.FEEDS_CONF }}"
+          echo "DIY_P1_SH=${{ env.DIY_P1_SH }}"
+          echo "DIY_P2_SH=${{ env.DIY_P2_SH }}"
+          echo "Device path: $DEVICE_PATH"
   
       - name: Clone Source Code(克隆源代码)
         run: |
