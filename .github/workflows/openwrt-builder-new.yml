@@ -44,25 +44,25 @@ jobs:
   Build:
     runs-on: ubuntu-22.04
     steps:
-      # - name: Setup Device Profile
-      #   id: setup
-      #   run: |
-      #     # 解析设备配置
-      #     DEVICE_JSON=$(echo '${{ env.DEVICE_PROFILES }}' | jq -r .${{ inputs.device_profile }})
+      - name: Setup Device Profile
+        id: setup
+        run: |
+          # 解析设备配置
+          DEVICE_JSON=$(echo '${{ env.DEVICE_PROFILES }}' | jq -r .${{ inputs.device_profile }})
           
-      #     # 合并基础配置与设备专属配置
-      #     COMBINED_CONFIG=$(jq -n \
-      #       --argjson base "$(echo '${{ env.BASE_CONFIG }}' | jq -R 'fromjson?')" \
-      #       --argjson device "$DEVICE_JSON" \
-      #       '$base * $device')
+          # 合并基础配置与设备专属配置
+          COMBINED_CONFIG=$(jq -n \
+            --argjson base "$(echo '${{ env.BASE_CONFIG }}' | jq -R 'fromjson?')" \
+            --argjson device "$DEVICE_JSON" \
+            '$base * $device')
           
-      #     # 导出环境变量
-      #     echo "COMBINED_CONFIG<<EOF" >> $GITHUB_ENV
-      #     echo "$COMBINED_CONFIG" >> $GITHUB_ENV
-      #     echo "EOF" >> $GITHUB_ENV
+          # 导出环境变量
+          echo "COMBINED_CONFIG<<EOF" >> $GITHUB_ENV
+          echo "$COMBINED_CONFIG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-      #     # 动态设置参数
-      #     jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' <<< "$COMBINED_CONFIG" >> $GITHUB_ENV
+          # 动态设置参数
+          jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' <<< "$COMBINED_CONFIG" >> $GITHUB_ENV
 
       - name: Initialization environment
         env:
