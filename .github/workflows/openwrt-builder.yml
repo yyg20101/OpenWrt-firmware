@@ -61,7 +61,7 @@ jobs:
       - name: Load Device Config
         run: |
           # 设置设备目录路径
-          DEVICE_PATH="$GITHUB_WORKSPACE/devices/${{ inputs.model }}"
+          DEVICE_PATH="devices/${{ inputs.model }}"
           echo "DEVICE_PATH=$DEVICE_PATH" >> $GITHUB_ENV
 
           # 加载设备配置
@@ -101,6 +101,14 @@ jobs:
           echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
           VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
           echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
+
+      - name: Cache
+        uses: klever1988/cachewrtbuild@main
+        with:
+         ccache: 'true'
+         mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
+         clean:  'false'  # 'false'
+         prefix: $OPENWRT_PATH
   
       - name: Load config
         run: |
@@ -126,14 +134,6 @@ jobs:
           chmod +x $DIY_P1_SH
           cd $OPENWRT_PATH
           $GITHUB_WORKSPACE/$DIY_P1_SH
-
-      - name: Cache
-        uses: klever1988/cachewrtbuild@main
-        with:
-         ccache: 'true'
-         mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
-         clean:  'false'  # 'false'
-         prefix: $OPENWRT_PATH
 
       - name: Update feeds
         run: cd $OPENWRT_PATH && ./scripts/feeds update -a
