@@ -128,14 +128,6 @@ jobs:
           chmod +x $DIY_P1_SH
           cd $OPENWRT_PATH
           $GITHUB_WORKSPACE/$DIY_P1_SH
-          
-#      - name: Cache Toolchain(缓存工具链)
-#        if: env.CACHE_TOOLCHAIN == 'true'
-#        uses: HiGarfield/cachewrtbuild@main
-#        with:
-#          ccache: false
-#          mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
-#          prefix: ${{ env.OPENWRT_PATH }}
 
       - name: Check Caches
         id: check-cache
