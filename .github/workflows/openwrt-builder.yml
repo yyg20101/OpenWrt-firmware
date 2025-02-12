@@ -144,7 +144,18 @@ jobs:
   
       - name: Install feeds
         run: cd $OPENWRT_PATH && ./scripts/feeds install -a
-  
+
+      - name: Custom Packages
+        run: |
+          if [ -f "$DEVICE_PATH/package" ]; then
+            cat "$DEVICE_PATH/package" >> scripts/Packages.sh
+            chmod +x scripts/Packages.sh
+            cd "$OPENWRT_PATH/package/"
+            scripts/Packages.sh
+          else
+            echo "Package file not found: $DEVICE_PATH/package, skipping."
+          fi
+
       - name: Load custom configuration
         run: |
           [ -e files ] && mv files $OPENWRT_PATH/files
