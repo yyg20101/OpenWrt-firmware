@@ -108,7 +108,7 @@ jobs:
          ccache: 'true'
          mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
          clean:  'false'  # 'false'
-         prefix: $OPENWRT_PATH
+         prefix: ${{ github.workspace }}/openwrt
   
       - name: Load config
         run: |
