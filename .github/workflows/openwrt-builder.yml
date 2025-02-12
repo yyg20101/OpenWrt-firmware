@@ -102,13 +102,47 @@ jobs:
           VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
           echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
 
-      - name: Cache
-        uses: klever1988/cachewrtbuild@main
+      # - name: Cache
+      #   uses: klever1988/cachewrtbuild@main
+      #   with:
+      #    ccache: 'true'
+      #    mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
+      #    clean:  'false'  # 'false'
+      #    prefix: ${{ github.workspace }}/openwrt
+
+      - name: Check Caches
+        id: check-cache
+        uses: actions/cache@main
         with:
-         ccache: 'true'
-         mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
-         clean:  'false'  # 'false'
-         prefix: ${{ github.workspace }}/openwrt
+          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ env.WRT_HASH }}
+          restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}
+          path: |
+            ./openwrt/.ccache
+            ./openwrt/staging_dir/host*
+            ./openwrt/staging_dir/tool*
+            
+      - name: Update Caches
+        run: |
+          if [ -d "./openwrt/staging_dir" ]; then
+            find "./openwrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
+              find "$DIR" -type f -exec touch {} +
+            done
+
+            mkdir -p ./openwrt/tmp && echo "1" > ./openwrt/tmp/.build
+
+            echo "toolchain skiped done!"
+          else
+            echo "caches missed!"
+          fi
+
+          if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
+            CACHE_LIST=$(gh cache list --key ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}} | cut -f 1)
+            for CACHE_KEY in $CACHE_LIST; do
+               gh cache delete $CACHE_KEY
+            done
+
+            echo "caches cleanup done!"
+          fi
   
       - name: Load config
         run: |
