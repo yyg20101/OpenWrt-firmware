@@ -35,6 +35,9 @@ UPDATE_PACKAGE() {
 		fi
 	done
 
+  # 创建临时目录以获取仓库信息
+  TEMP_DIR=$(mktemp -d)
+
 	# 克隆仓库（仅元数据）
   git clone --bare "https://github.com/$PKG_REPO.git" "$TEMP_DIR" > /dev/null 2>&1
 
