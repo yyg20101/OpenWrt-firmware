@@ -101,14 +101,6 @@ jobs:
           echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
           VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
           echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
-
-      - name: Cache
-        uses: klever1988/cachewrtbuild@main
-        with:
-         ccache: 'true'
-         mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
-         clean:  'false'  # 'false'
-         prefix: $OPENWRT_PATH
   
       - name: Load config
         run: |
