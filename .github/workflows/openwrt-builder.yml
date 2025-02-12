@@ -126,6 +126,7 @@ jobs:
   
       - name: Load custom feeds
         run: |
+          cd $GITHUB_WORKSPACE
           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF $OPENWRT_PATH/feeds.conf.default
           chmod +x $DIY_P1_SH
           cd $OPENWRT_PATH
@@ -145,13 +146,21 @@ jobs:
       - name: Install feeds
         run: cd $OPENWRT_PATH && ./scripts/feeds install -a
 
+      - name: Install General
+        run: |
+          cd $GITHUB_WORKSPACE
+          chmod +x scripts/General.sh
+          cd $OPENWRT_PATH
+          $GITHUB_WORKSPACE/scripts/General.sh
+
       - name: Custom Packages
         run: |
+          cd $GITHUB_WORKSPACE
           if [ -f "$DEVICE_PATH/package" ]; then
             cat "$DEVICE_PATH/package" >> scripts/Packages.sh
             chmod +x scripts/Packages.sh
             cd "$OPENWRT_PATH/package/"
-            scripts/Packages.sh
+            $GITHUB_WORKSPACE/scripts/Packages.sh
           else
             echo "Package file not found: $DEVICE_PATH/package, skipping."
           fi
