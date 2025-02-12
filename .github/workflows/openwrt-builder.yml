@@ -100,6 +100,7 @@ jobs:
           git clone $REPO_URL -b $REPO_BRANCH openwrt
           cd openwrt
           echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
+          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
           VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
           echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
   
@@ -117,14 +118,9 @@ jobs:
       - name: Generate Variables(生成变量)
         run: |
           cd $OPENWRT_PATH
-          make defconfig > /dev/null 2>&1
           SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
           echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
-          DEVICE_TARGET=$(cat .config | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
-          echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_ENV
-          DEVICE_SUBTARGET=$(cat .config | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
-          echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
-  
+
       - name: Load custom feeds
         run: |
           cd $GITHUB_WORKSPACE
@@ -145,8 +141,8 @@ jobs:
         id: check-cache
         uses: actions/cache@main
         with:
-          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
-          restore-keys: ${{env.DEVICE_TARGET}}-${{env.DEVICE_SUBTARGET}}
+          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ env.WRT_HASH }}
+          restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}
           path: |
             $OPENWRT_PATH/.ccache
             $OPENWRT_PATH/staging_dir/host*
@@ -167,7 +163,7 @@ jobs:
           fi
           
           if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
-            CACHE_LIST=$(gh cache list --key "DEVICE_TARGET-DEVICE_SUBTARGET" | cut -f 1)
+            CACHE_LIST=$(gh cache list --key ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}} | cut -f 1)
             for CACHE_KEY in $CACHE_LIST; do
                gh cache delete $CACHE_KEY
             done
@@ -236,7 +232,7 @@ jobs:
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         uses: actions/upload-artifact@main
         with:
-          name: ${{ env.SOURCE_REPO }}-bin-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}-${{ env.FILE_DATE }}
+          name: ${{ env.SOURCE_REPO }}-bin-${{ env.FIRMWARE_TAG }}-${{ env.FILE_DATE }}
           path: ${{ env.OPENWRT_PATH }}/bin
   
       - name: Organize Files(整理文件)
