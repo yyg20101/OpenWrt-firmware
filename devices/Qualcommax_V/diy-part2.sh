@@ -70,5 +70,15 @@ fetch_code() {
 # ./scripts/feeds update -a
 ./scripts/feeds install -a
 
-#coremark修复
+#修复Coremark编译失败
+
+# 方案一
 # sed -i 's/mkdir \$(PKG_BUILD_DIR)\/\$(ARCH)/mkdir -p \$(PKG_BUILD_DIR)\/\$(ARCH)/g' feeds/packages/utils/coremark/Makefile
+
+#方案二
+# CM_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/coremark/Makefile")
+# if [ -f "$CM_FILE" ]; then
+# 	sed -i 's/mkdir/mkdir -p/g' $CM_FILE
+
+# 	cd $PKG_PATH && echo "coremark has been fixed!"
+# fi
