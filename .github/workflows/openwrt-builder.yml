@@ -111,6 +111,7 @@ jobs:
       - name: Extend Driver
         if: env.EXTEND_DRIVER == 'true'
         run: |
+          echo "" >> $OPENWRT_PATH/.config  # 先追加一个换行符
           cat config/Driver.config >> $OPENWRT_PATH/.config
           cat $OPENWRT_PATH/.config
   
@@ -156,11 +157,12 @@ jobs:
 
       - name: Custom Packages
         run: |
-          cd $GITHUB_WORKSPACE
           if [ -f "$DEVICE_PATH/package" ]; then
-            chmod +x scripts/Packages.sh
+            cd $GITHUB_WORKSPACE
+            echo "" >> scripts/Packages.sh  # 先追加一个换行符
             cat "$DEVICE_PATH/package" >> scripts/Packages.sh
             cat scripts/Packages.sh
+            chmod +x scripts/Packages.sh
             cd "$OPENWRT_PATH/package/"
             $GITHUB_WORKSPACE/scripts/Packages.sh
             echo "执行 Packages.sh 脚本"
