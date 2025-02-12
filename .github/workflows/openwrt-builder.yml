@@ -61,7 +61,7 @@ jobs:
       - name: Load Device Config
         run: |
           # 设置设备目录路径
-          DEVICE_PATH="devices/${{ inputs.model }}"
+          DEVICE_PATH="$GITHUB_WORKSPACE/devices/${{ inputs.model }}"
           echo "DEVICE_PATH=$DEVICE_PATH" >> $GITHUB_ENV
 
           # 加载设备配置
