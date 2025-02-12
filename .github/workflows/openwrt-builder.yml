@@ -127,39 +127,13 @@ jobs:
           cd $OPENWRT_PATH
           $GITHUB_WORKSPACE/$DIY_P1_SH
 
-      - name: Check Caches
-        id: check-cache
-        uses: actions/cache@main
+      - name: Cache
+        uses: klever1988/cachewrtbuild@main
         with:
-          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ env.WRT_HASH }}
-          restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}
-          path: |
-            $OPENWRT_PATH/.ccache
-            $OPENWRT_PATH/staging_dir/host*
-            $OPENWRT_PATH/staging_dir/tool*
-
-      - name: Update Caches
-        run: |
-          if [ -d "$OPENWRT_PATH/staging_dir" ]; then
-            find "$OPENWRT_PATH/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
-              find "$DIR" -type f -exec touch {} +
-            done
-          
-            mkdir -p $OPENWRT_PATH/tmp && echo "1" > $OPENWRT_PATH/tmp/.build
-          
-            echo "toolchain skiped done!"
-          else
-            echo "caches missed!"
-          fi
-          
-          if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
-            CACHE_LIST=$(gh cache list --key ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}} | cut -f 1)
-            for CACHE_KEY in $CACHE_LIST; do
-               gh cache delete $CACHE_KEY
-            done
-          
-            echo "caches cleanup done!"
-          fi
+         ccache: 'true'
+         mixkey: '${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}'
+         clean:  'false'  # 'false'
+         prefix: $OPENWRT_PATH
 
       - name: Update feeds
         run: cd $OPENWRT_PATH && ./scripts/feeds update -a
