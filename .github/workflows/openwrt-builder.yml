@@ -91,8 +91,9 @@ jobs:
           [[ -n "$DIY_P2_SH" ]] && echo "DIY_P2_SH=$DEVICE_PATH/$DIY_P2_SH" >> $GITHUB_ENV
           [[ -n "$FEEDS_CONF" ]] && echo "FEEDS_CONF=$DEVICE_PATH/$FEEDS_CONF" >> $GITHUB_ENV
 
-          echo "config file hash is ${{ hashFiles('$CONFIG_FILE') }}"
-
+      - name: Debug hashFiles output
+        run: echo ${{ hashFiles('$CONFIG_FILE') }}
+  
       - name: Clone Source Code(克隆源代码)
         run: |
           df -hT $GITHUB_WORKSPACE
@@ -107,12 +108,14 @@ jobs:
           cd $OPENWRT_PATH
           SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
           echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
+          echo "config file hash is ${{ hashFiles('$CONFIG_FILE') }}"
+          echo "config file hash is ${{ hashFiles('$GITHUB_WORKSPACE/$CONFIG_FILE') }}"
 
       - name: Check Caches
         id: check-cache
         uses: actions/cache@main
         with:
-          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ hashFiles('$CONFIG_FILE') }}
+          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ hashFiles('./openwrt/.config') }}
           restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}
           path: |
             ./openwrt/.ccache
