@@ -91,6 +91,8 @@ jobs:
           [[ -n "$DIY_P2_SH" ]] && echo "DIY_P2_SH=$DEVICE_PATH/$DIY_P2_SH" >> $GITHUB_ENV
           [[ -n "$FEEDS_CONF" ]] && echo "FEEDS_CONF=$DEVICE_PATH/$FEEDS_CONF" >> $GITHUB_ENV
 
+          echo "config file hash is ${{ hashFiles('$CONFIG_FILE') }}"
+
       - name: Clone Source Code(克隆源代码)
         run: |
           df -hT $GITHUB_WORKSPACE
