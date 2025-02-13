@@ -116,8 +116,7 @@ jobs:
           path: |
             ./openwrt/.ccache
             ./openwrt/staging_dir/host*
-            ./openwrt/staging_dir/tool*
-            
+
       - name: Update Caches
         run: |
           if [ -d "./openwrt/staging_dir" ]; then
