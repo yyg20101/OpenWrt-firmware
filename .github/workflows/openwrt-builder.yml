@@ -105,7 +105,7 @@ jobs:
           cd $OPENWRT_PATH
           SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
           echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
-          CONFIG_HASH=$(md5sum $GITHUB_WORKSPACE/$CONFIG_FILE | awk '{print $1}')
+          CONFIG_HASH=$(xxh32sum $GITHUB_WORKSPACE/$CONFIG_FILE | awk '{print $1}')
           echo "CONFIG_HASH=$CONFIG_HASH" >> $GITHUB_ENV
 
       - name: Check Caches
