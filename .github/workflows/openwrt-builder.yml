@@ -90,9 +90,6 @@ jobs:
           [[ -n "$DIY_P1_SH" ]] && echo "DIY_P1_SH=$DEVICE_PATH/$DIY_P1_SH" >> $GITHUB_ENV
           [[ -n "$DIY_P2_SH" ]] && echo "DIY_P2_SH=$DEVICE_PATH/$DIY_P2_SH" >> $GITHUB_ENV
           [[ -n "$FEEDS_CONF" ]] && echo "FEEDS_CONF=$DEVICE_PATH/$FEEDS_CONF" >> $GITHUB_ENV
-
-      - name: Debug hashFiles output
-        run: echo ${{ hashFiles('$CONFIG_FILE') }}
   
       - name: Clone Source Code(克隆源代码)
         run: |
@@ -110,13 +107,12 @@ jobs:
           echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
           CONFIG_HASH=$(md5sum $GITHUB_WORKSPACE/$CONFIG_FILE | awk '{print $1}')
           echo "CONFIG_HASH=$CONFIG_HASH" >> $GITHUB_ENV
-          echo "config file hash is $CONFIG_HASH"
 
       - name: Check Caches
         id: check-cache
         uses: actions/cache@main
         with:
-          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ hashFiles('$GITHUB_WORKSPACE/$CONFIG_FILE') }}
+          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ env.CONFIG_HASH }}
           restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}
           path: |
             ./openwrt/.ccache
@@ -155,7 +151,6 @@ jobs:
         run: |
           echo "" >> $OPENWRT_PATH/.config  # 先追加一个换行符
           cat config/Driver.config >> $OPENWRT_PATH/.config
-          echo "config file hash is ${{ hashFiles('$OPENWRT_PATH/.config') }}"
 
       - name: Load custom feeds
         run: |
@@ -212,8 +207,6 @@ jobs:
         id: compile
         run: |
           cd $OPENWRT_PATH
-          echo "config file hash is ${{ hashFiles('./.config') }}"
-          echo "config file hash is ${{ hashFiles('.config') }}"
           echo -e "$(nproc) thread compile"
           make -j$(nproc) || make -j1 || make -j1 V=s
           echo "status=success" >> $GITHUB_OUTPUT
