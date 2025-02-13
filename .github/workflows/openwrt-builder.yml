@@ -223,12 +223,28 @@ jobs:
           else
           echo "No host directories found"
           fi
-          
+
           # 处理 staging_dir/tool*
           if compgen -G "$OPENWRT_PATH/staging_dir/tool*" > /dev/null; then
           du -sh $OPENWRT_PATH/staging_dir/tool* 2>/dev/null
           else
           echo "No tool directories found"
+          fi
+          
+          # 处理 staging_dir/tool*
+          if compgen -G "$OPENWRT_PATH/staging_dir/tool*" > /dev/null; then
+            TOOLCHAIN_SIZE_KB=$(du -s "$OPENWRT_PATH/staging_dir/tool*" 2>/dev/null | awk '{sum += $1} END {print sum}')
+            
+            echo "Total size of staging_dir/tool*: $((TOOLCHAIN_SIZE_KB / 1024)) MB"
+      
+            if [[ $TOOLCHAIN_SIZE_KB -gt 512000 ]]; then
+              echo "staging_dir/tool* size exceeds 500MB, listing subdirectory sizes:"
+              for dir in $OPENWRT_PATH/staging_dir/tool*; do
+                du -sh "$dir"/* 2>/dev/null || echo "No subdirectories in $dir"
+              done
+            fi
+          else
+            echo "No tool directories found"
           fi
           
           echo "================================="
