@@ -64,7 +64,7 @@ jobs:
           DEVICE_PATH="devices/${{ inputs.model }}"
           echo "DEVICE_PATH=$DEVICE_PATH" >> $GITHUB_ENV
 
-          # 加载设备配置
+          # 读取 env 配置
           if [ -f "$DEVICE_PATH/env" ]; then
             while IFS= read -r line || [[ -n "$line" ]]; do
               # 跳过空行和注释
@@ -78,20 +78,19 @@ jobs:
               var_name="$(echo -n "$var_name" | xargs)"
               var_value="$(echo -n "$var_value" | xargs)"
 
-              # 处理路径变量
-              case "$var_name" in
-                CONFIG_FILE|DIY_P1_SH|DIY_P2_SH|FEEDS_CONF)
-                  resolved_path="$DEVICE_PATH/$var_value"
-                  echo "$var_name=$resolved_path" >> $GITHUB_ENV
-                  echo "Resolved $var_name: $resolved_path"
-                  ;;
-                *)
-                  echo "$var_name=$var_value" >> $GITHUB_ENV
-                  ;;
-              esac
+              # 仅当变量非空时才覆盖默认值
+              if [[ -n "$var_value" ]]; then
+                echo "$var_name=$var_value" >> $GITHUB_ENV
+              fi
             done < "$DEVICE_PATH/env"
           fi
-  
+
+          # 处理路径相关变量（仅当存在时修改）
+          [[ -n "$CONFIG_FILE" ]] && echo "CONFIG_FILE=$DEVICE_PATH/$CONFIG_FILE" >> $GITHUB_ENV
+          [[ -n "$DIY_P1_SH" ]] && echo "DIY_P1_SH=$DEVICE_PATH/$DIY_P1_SH" >> $GITHUB_ENV
+          [[ -n "$DIY_P2_SH" ]] && echo "DIY_P2_SH=$DEVICE_PATH/$DIY_P2_SH" >> $GITHUB_ENV
+          [[ -n "$FEEDS_CONF" ]] && echo "FEEDS_CONF=$DEVICE_PATH/$FEEDS_CONF" >> $GITHUB_ENV
+
       - name: Clone Source Code(克隆源代码)
         run: |
           df -hT $GITHUB_WORKSPACE
