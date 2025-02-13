@@ -211,6 +211,8 @@ jobs:
         id: compile
         run: |
           cd $OPENWRT_PATH
+          echo "config file hash is ${{ hashFiles('./.config') }}"
+          echo "config file hash is ${{ hashFiles('.config') }}"
           echo -e "$(nproc) thread compile"
           make -j$(nproc) || make -j1 || make -j1 V=s
           echo "status=success" >> $GITHUB_OUTPUT
