@@ -33,7 +33,7 @@ jobs:
   Build:
     runs-on: ubuntu-22.04
     steps:
-          
+
       - name: Initialization environment
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -54,7 +54,7 @@ jobs:
           swap-size-mb: 1024
           temp-reserve-mb: 100
           root-reserve-mb: 1024
-  
+
       - name: Checkout
         uses: actions/checkout@main
 
@@ -90,7 +90,7 @@ jobs:
           [[ -n "$DIY_P1_SH" ]] && echo "DIY_P1_SH=$DEVICE_PATH/$DIY_P1_SH" >> $GITHUB_ENV
           [[ -n "$DIY_P2_SH" ]] && echo "DIY_P2_SH=$DEVICE_PATH/$DIY_P2_SH" >> $GITHUB_ENV
           [[ -n "$FEEDS_CONF" ]] && echo "FEEDS_CONF=$DEVICE_PATH/$FEEDS_CONF" >> $GITHUB_ENV
-  
+
       - name: Clone Source Code(克隆源代码)
         run: |
           df -hT $GITHUB_WORKSPACE
@@ -117,6 +117,7 @@ jobs:
           path: |
             ./openwrt/.ccache
             ./openwrt/staging_dir/host*
+            ./openwrt/staging_dir/tool*
 
       - name: Update Caches
         run: |
@@ -140,12 +141,12 @@ jobs:
 
             echo "caches cleanup done!"
           fi
-  
+
       - name: Load config
         run: |
           echo "CONFIG_FILE path is $CONFIG_FILE"
           cp $CONFIG_FILE $OPENWRT_PATH/.config
-  
+
       - name: Extend Driver
         if: env.EXTEND_DRIVER == 'true'
         run: |
@@ -162,7 +163,7 @@ jobs:
 
       - name: Update feeds
         run: cd $OPENWRT_PATH && ./scripts/feeds update -a
-  
+
       - name: Install feeds
         run: cd $OPENWRT_PATH && ./scripts/feeds install -a
 
@@ -194,7 +195,7 @@ jobs:
           chmod +x $DIY_P2_SH
           cd $OPENWRT_PATH
           $GITHUB_WORKSPACE/$DIY_P2_SH
-  
+
       - name: Download DL Package(下载DL软件包)
         run: |
           cd $OPENWRT_PATH
@@ -202,7 +203,7 @@ jobs:
           make download -j8
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
-  
+
       - name: Compile Firmware(开始编译固件)
         id: compile
         run: |
@@ -212,60 +213,85 @@ jobs:
           echo "status=success" >> $GITHUB_OUTPUT
           echo "DATE=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
           echo "FILE_DATE=$(date +"%Y.%m.%d")" >> $GITHUB_ENV
+
+      - name: Optimize Compilation Directories
+        run: |
+          CCACHE_DIR="$OPENWRT_PATH/.ccache"
+      
+          echo "======== Step 1: Print Initial Directory Sizes ========"
+          du -sh "$CCACHE_DIR" 2>/dev/null || echo "No .ccache directory found"
           
-          # 输出目录大小
-          echo "======== Directory Sizes ========"
-          du -sh $OPENWRT_PATH/.ccache 2>/dev/null || echo "No .ccache directory found"
-          
-          # 处理 staging_dir/host*
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
-            du -sh $OPENWRT_PATH/staging_dir/host* 2>/dev/null
+            du -sh "$OPENWRT_PATH/staging_dir/host*" 2>/dev/null
           else
             echo "No host directories found"
           fi
           
-          # 处理 staging_dir/tool*
           if compgen -G "$OPENWRT_PATH/staging_dir/tool*" > /dev/null; then
-            du -sh $OPENWRT_PATH/staging_dir/tool* 2>/dev/null
+            du -sh "$OPENWRT_PATH/staging_dir/tool*" 2>/dev/null
+            echo "======== staging_dir/tool* Subdirectory Sizes ========"
+            for dir in "$OPENWRT_PATH/staging_dir/tool"*; do
+              echo "Subdirectories in: $dir"
+              du -sh "$dir"/* 2>/dev/null || echo "No subdirectories in $dir"
+              echo "---------------------------------"
+            done
+          else
+            echo "No tool directories found"
+          fi
+      
+          echo "======== Step 2: Remove 'initial' Directory in Toolchain ========"
+          find "$OPENWRT_PATH/staging_dir/toolchain-"* -type d -name "initial" -exec rm -rf {} + 2>/dev/null || echo "No 'initial' directory found"
+      
+          echo "======== Step 3: Clean 'libexec' Directory in Toolchain ========"
+          for libexec_dir in "$OPENWRT_PATH/staging_dir/toolchain-"*/libexec; do
+            if [ -d "$libexec_dir" ]; then
+              echo "Optimizing: $libexec_dir"
+              find "$libexec_dir" -type f ! -name "*.so*" -delete
+            else
+              echo "No 'libexec' directory found in $libexec_dir"
+            fi
+          done
+      
+          echo "======== Step 4: Optimize .ccache Directory ========"
+          if [ -d "$CCACHE_DIR" ]; then
+            echo "Before Cleanup: $(du -sh "$CCACHE_DIR" 2>/dev/null)"
+          
+            # 清理 7 天前的旧缓存
+            ccache --evict-older-than 7d
+      
+            # 删除临时文件
+            rm -rf "$CCACHE_DIR/tmp"
+      
+            echo "After Cleanup: $(du -sh "$CCACHE_DIR" 2>/dev/null)"
+          else
+            echo "No .ccache directory found"
+          fi
+      
+          echo "======== Step 5: Print Final Directory Sizes ========"
+          du -sh "$CCACHE_DIR" 2>/dev/null || echo "No .ccache directory found"
+      
+          if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
+            du -sh "$OPENWRT_PATH/staging_dir/host*" 2>/dev/null
+          else
+            echo "No host directories found"
+          fi
+      
+          if compgen -G "$OPENWRT_PATH/staging_dir/tool*" > /dev/null; then
+            du -sh "$OPENWRT_PATH/staging_dir/tool*" 2>/dev/null
+            echo "======== staging_dir/tool* Subdirectory Sizes After Cleanup ========"
+            for dir in "$OPENWRT_PATH/staging_dir/tool"*; do
+              echo "Subdirectories in: $dir"
+              du -sh "$dir"/* 2>/dev/null || echo "No subdirectories in $dir"
+              echo "---------------------------------"
+            done
           else
             echo "No tool directories found"
           fi
 
-          echo "======== staging_dir/tool* Directory Analysis ========"
-
-          # 确保目录存在
-          TOOLCHAIN_DIRS=$(find "$OPENWRT_PATH/staging_dir" -maxdepth 1 -type d -name "tool*" 2>/dev/null)
-          
-          if [[ -z "$TOOLCHAIN_DIRS" ]]; then
-            echo "No tool directories found"
-            exit 0
-          fi
-      
-          # 计算总大小
-          echo "======== staging_dir/tool* Total Size ========"
-          du -sh $TOOLCHAIN_DIRS 2>/dev/null
-      
-          # 计算子目录大小
-          echo "======== staging_dir/tool* Subdirectory Sizes ========"
-          for dir in $TOOLCHAIN_DIRS; do
-            echo "Subdirectories in: $dir"
-          
-            # 避免空目录错误
-            if [[ -n $(find "$dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null) ]]; then
-              du -sh "$dir"/* 2>/dev/null || echo "No subdirectories in $dir"
-            else
-              echo "No subdirectories in $dir"
-          fi
-          
-            echo "---------------------------------"
-          done
-      
-          echo "================================="
-  
       - name: Check Space Usage(检查空间使用情况)
         if: (!cancelled())
         run: df -hT
-  
+
       - name: Organize Files(整理文件)
         if: steps.compile.outputs.status == 'success'
         run: |
@@ -276,14 +302,14 @@ jobs:
           rm -rf packages
           echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
           echo "status=success" >> $GITHUB_OUTPUT
-  
+
       - name: Generate release tag
         id: tag
         if: env.FIRMWARE_RELEASE == 'true' && !cancelled()
         run: |
           echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
           echo "status=success" >> $GITHUB_OUTPUT
-  
+
       - name: Upload Firmware To Release(发布固件)
         if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE == 'true'
         uses: ncipollo/release-action@v1
@@ -304,13 +330,13 @@ jobs:
             ### 🧊 固件版本
             - 固件编译前最后一次➦[主源码](${{ env.REPO_URL }})更新记录
             - ${{ env.VERSION_INFO }}
-  
+
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
           retain_days: 0
           keep_minimum_runs: 2
-  
+
       - name: Remove old Releases
         uses: dev-drprasad/delete-older-releases@master
         if: env.UPLOAD_RELEASE == 'true' && !cancelled()
