@@ -217,16 +217,16 @@ jobs:
       - name: Optimize Compilation Directories
         run: |
           echo "======== Step 1: Print Initial Directory Sizes ========"
-          du -sh "$OPENWRT_PATH/.ccache" 2>/dev/null || echo "No .ccache directory found"
+          du -sh $OPENWRT_PATH/.ccache 2>/dev/null || echo "No .ccache directory found"
           
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
-            du -sh "$OPENWRT_PATH/staging_dir/host*" 2>/dev/null
+            du -sh $OPENWRT_PATH/staging_dir/host* 2>/dev/null
           else
             echo "No host directories found"
           fi
           
           if compgen -G "$OPENWRT_PATH/staging_dir/tool*" > /dev/null; then
-            du -sh "$OPENWRT_PATH/staging_dir/tool*" 2>/dev/null
+            du -sh $OPENWRT_PATH/staging_dir/tool* 2>/dev/null
             echo "======== staging_dir/tool* Subdirectory Sizes ========"
             for dir in "$OPENWRT_PATH/staging_dir/tool"*; do
               echo "Subdirectories in: $dir"
@@ -251,16 +251,16 @@ jobs:
           done
       
           echo "======== Step 4: Print Final Directory Sizes ========"
-          du -sh "$OPENWRT_PATH/.ccache" 2>/dev/null || echo "No .ccache directory found"
+          du -sh $OPENWRT_PATH/.ccache 2>/dev/null || echo "No .ccache directory found"
       
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
-            du -sh "$OPENWRT_PATH/staging_dir/host*" 2>/dev/null
+            du -sh $OPENWRT_PATH/staging_dir/host* 2>/dev/null
           else
             echo "No host directories found"
           fi
       
           if compgen -G "$OPENWRT_PATH/staging_dir/tool*" > /dev/null; then
-            du -sh "$OPENWRT_PATH/staging_dir/tool*" 2>/dev/null
+            du -sh $OPENWRT_PATH/staging_dir/tool* 2>/dev/null
             echo "======== staging_dir/tool* Subdirectory Sizes After Cleanup ========"
             for dir in "$OPENWRT_PATH/staging_dir/tool"*; do
               echo "Subdirectories in: $dir"
