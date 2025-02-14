@@ -252,22 +252,7 @@ jobs:
             fi
           done
       
-          echo "======== Step 4: Optimize .ccache Directory ========"
-          if [ -d "$CCACHE_DIR" ]; then
-            echo "Before Cleanup: $(du -sh "$CCACHE_DIR" 2>/dev/null)"
-          
-            # 清理 7 天前的旧缓存
-            ccache --evict-older-than 7d
-      
-            # 删除临时文件
-            rm -rf "$CCACHE_DIR/tmp"
-      
-            echo "After Cleanup: $(du -sh "$CCACHE_DIR" 2>/dev/null)"
-          else
-            echo "No .ccache directory found"
-          fi
-      
-          echo "======== Step 5: Print Final Directory Sizes ========"
+          echo "======== Step 4: Print Final Directory Sizes ========"
           du -sh "$CCACHE_DIR" 2>/dev/null || echo "No .ccache directory found"
       
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
