@@ -216,10 +216,8 @@ jobs:
 
       - name: Optimize Compilation Directories
         run: |
-          CCACHE_DIR="$OPENWRT_PATH/.ccache"
-      
           echo "======== Step 1: Print Initial Directory Sizes ========"
-          du -sh "$CCACHE_DIR" 2>/dev/null || echo "No .ccache directory found"
+          du -sh "$OPENWRT_PATH/.ccache" 2>/dev/null || echo "No .ccache directory found"
           
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
             du -sh "$OPENWRT_PATH/staging_dir/host*" 2>/dev/null
@@ -253,7 +251,7 @@ jobs:
           done
       
           echo "======== Step 4: Print Final Directory Sizes ========"
-          du -sh "$CCACHE_DIR" 2>/dev/null || echo "No .ccache directory found"
+          du -sh "$OPENWRT_PATH/.ccache" 2>/dev/null || echo "No .ccache directory found"
       
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
             du -sh "$OPENWRT_PATH/staging_dir/host*" 2>/dev/null
