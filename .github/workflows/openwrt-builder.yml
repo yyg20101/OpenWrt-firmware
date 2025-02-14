@@ -240,17 +240,7 @@ jobs:
           echo "======== Step 2: Remove 'initial' Directory in Toolchain ========"
           find "$OPENWRT_PATH/staging_dir/toolchain-"* -type d -name "initial" -exec rm -rf {} + 2>/dev/null || echo "No 'initial' directory found"
       
-          echo "======== Step 3: Clean 'libexec' Directory in Toolchain ========"
-          for libexec_dir in "$OPENWRT_PATH/staging_dir/toolchain-"*/libexec; do
-            if [ -d "$libexec_dir" ]; then
-              echo "Optimizing: $libexec_dir"
-              find "$libexec_dir" -type f ! -name "*.so*" -delete
-            else
-              echo "No 'libexec' directory found in $libexec_dir"
-            fi
-          done
-      
-          echo "======== Step 4: Print Final Directory Sizes ========"
+          echo "======== Step 3: Print Final Directory Sizes ========"
           du -sh $OPENWRT_PATH/.ccache 2>/dev/null || echo "No .ccache directory found"
       
           if compgen -G "$OPENWRT_PATH/staging_dir/host*" > /dev/null; then
