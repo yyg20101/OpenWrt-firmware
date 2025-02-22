@@ -18,6 +18,7 @@ on:
 
 # 基础配置（公共参数）
 env:
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
   FEEDS_CONF: feeds.conf.default
