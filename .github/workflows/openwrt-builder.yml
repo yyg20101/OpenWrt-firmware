@@ -105,14 +105,13 @@ jobs:
           cd $OPENWRT_PATH
           SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
           echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
-          CONFIG_HASH=$(md5sum $GITHUB_WORKSPACE/$CONFIG_FILE | awk '{print $1}')
-          echo "CONFIG_HASH=$CONFIG_HASH" >> $GITHUB_ENV
+          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Check Caches
         id: check-cache
         uses: actions/cache@main
         with:
-          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ env.CONFIG_HASH }}
+          key: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.FIRMWARE_TAG }}-${{ env.CWRT_HASH }}
           restore-keys: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}}
           path: |
             ./openwrt/.ccache
