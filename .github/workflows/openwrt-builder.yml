@@ -99,13 +99,13 @@ jobs:
           echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
           VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
           echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
+          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Generate Variables(生成变量)
         run: |
           cd $OPENWRT_PATH
           SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
           echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
-          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Check Caches
         id: check-cache
