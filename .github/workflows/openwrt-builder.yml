@@ -255,12 +255,11 @@ jobs:
       - name: Clear Old Cache
         run: |
           if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
-          CACHE_LIST=$(gh cache list --key ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}} | cut -f 1)
-          for CACHE_KEY in $CACHE_LIST; do
-          gh cache delete $CACHE_KEY
-          done
-          
-          echo "caches cleanup done!"
+            CACHE_LIST=$(gh cache list --key ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{env.FIRMWARE_TAG}} | cut -f 1)
+            for CACHE_KEY in $CACHE_LIST; do
+              gh cache delete $CACHE_KEY
+            done
+            echo "caches cleanup done!"
           fi
 
       - name: Check Space Usage(检查空间使用情况)
