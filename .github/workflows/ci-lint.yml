@@ -1,0 +1,53 @@
+name: CI Lint
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "scripts/**"
+      - "devices/**"
+  push:
+    branches:
+      - main
+      - codex/main-workflow-opt
+    paths:
+      - ".github/workflows/**"
+      - "scripts/**"
+      - "devices/**"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository / 检出仓库
+        uses: actions/checkout@v6
+
+      - name: Actionlint / 工作流静态检查
+        uses: reviewdog/action-actionlint@v1
+        with:
+          fail_level: error
+
+      - name: Validate Workflow YAML / 校验工作流 YAML
+        run: |
+          set -euo pipefail
+          ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"
+
+      - name: Validate Shell Syntax / 校验 Shell 语法
+        run: |
+          set -euo pipefail
+          find scripts -type f -name "*.sh" -print0 \
+            | xargs -0 -n1 bash -n
+
+      - name: Validate Device Env / 校验设备 env
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-device-env.sh
+
+      - name: Validate Dependabot Coverage / 校验 Dependabot 覆盖
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-dependabot-coverage.sh

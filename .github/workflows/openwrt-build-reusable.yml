@@ -1,0 +1,324 @@
+name: OpenWrt Build Reusable
+run-name: ${{ format('Build - {0}', inputs.model) }}
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: "设备配置 / Device Profile"
+        required: true
+        type: string
+      build_all:
+        description: "并行构建全部设备 / Build all devices in parallel"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+# Global defaults / 全局默认参数
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: .config
+  DIY_P1_SH: scripts/common/diy-part1.sh
+  DIY_P2_SH: scripts/common/diy-part2.sh
+  PACKAGE_FILE: scripts/common/package
+  DRIVER_CONFIG_PATH: scripts/common/Driver.config
+  DRIVER_CONFIG_GLOB: scripts/common/config/**/*.config
+  DRIVER_CONFIG_HASH_GLOB: scripts/common/config/**/*.config
+  GENERAL_SCRIPT_PATH: scripts/common/General.sh
+  PACKAGE_BASE_SCRIPT_PATH: scripts/common/Packages.sh
+  BUILD_ACCEL_CACHE_SCHEMA: v2
+  EXTEND_DRIVER: true
+  FIRMWARE_RELEASE: true
+  FIRMWARE_TAG: X86-64
+  TZ: Asia/Shanghai
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      # ============================================================================
+      # Phase 1: Environment Setup / 环境准备
+      # ============================================================================
+      - name: Initialize Environment / 初始化环境
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          # Keep system apt sources (especially ubuntu.sources on 24.04+).
+          # 保留系统 apt 源（24.04+ 默认在 /etc/apt/sources.list.d/ubuntu.sources）。
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android "$AGENT_TOOLSDIRECTORY"
+          sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+          sudo -E apt-get -qq update
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo -E apt-get -qq install \
+            ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache \
+            clang cmake cpio curl device-tree-compiler file flex gawk gcc-multilib g++-multilib gettext \
+            genisoimage git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev \
+            libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libncurses5-dev \
+            libncursesw5-dev libpython3-dev libreadline-dev libssl-dev libtool llvm lrzsz msmtp ninja-build \
+            p7zip p7zip-full patch pkgconf python3 python3-pyelftools python3-setuptools \
+            qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget \
+            xmlto xxd zlib1g-dev
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+          sudo timedatectl set-timezone "$TZ"
+
+      - name: Maximize Build Space / 最大化编译空间
+        uses: easimon/maximize-build-space@master
+        with:
+          swap-size-mb: 1024
+          temp-reserve-mb: 100
+          root-reserve-mb: 1024
+
+      - name: Checkout Repository / 检出仓库
+        uses: actions/checkout@v6
+
+      - name: Show Runner Info / 显示运行器信息
+        run: |
+          echo "CPU: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)"
+          echo "Cores: $(nproc)"
+          echo "Memory:"
+          free -h
+          echo "Disk:"
+          df -hT /
+
+      # ============================================================================
+      # Phase 2: Device Profile Resolution / 设备配置解析
+      # ============================================================================
+      - name: Load Device Profile / 加载设备配置
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/load-device-profile.sh" "${{ inputs.model }}" "$GITHUB_ENV" "$GITHUB_WORKSPACE"
+
+      # ============================================================================
+      # Phase 3: Source Preparation / 源码准备
+      # ============================================================================
+      - name: Clone OpenWrt Source / 克隆 OpenWrt 源码
+        run: |
+          set -euo pipefail
+          df -hT "$GITHUB_WORKSPACE"
+          git clone --single-branch --depth=1 "$REPO_URL" -b "$REPO_BRANCH" openwrt
+          cd openwrt
+          echo "OPENWRT_PATH=$PWD" >> "$GITHUB_ENV"
+          VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
+          echo "VERSION_INFO=$VERSION_INFO" >> "$GITHUB_ENV"
+
+      - name: Generate Build Variables / 生成构建变量
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/generate-build-vars.sh" "$OPENWRT_PATH" "$GITHUB_ENV" "$REPO_URL"
+
+      # ============================================================================
+      # Phase 4: Compile Cache Strategy / 编译缓存策略
+      # - No DL cache: download takes ~2 minutes, skip to reduce cache overhead
+      # - ccache: compiler object cache (high impact for repeat builds)
+      # - build accel cache: toolchain/host artifacts (highest impact for compile time)
+      # ============================================================================
+      - name: Restore ccache / 恢复 ccache
+        id: cache-ccache
+        uses: actions/cache@v5
+        with:
+          path: ./openwrt/.ccache
+          key: ccache-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ env.CACHE_WEEK }}-${{ env.WRT_HASH }}
+          restore-keys: |
+            ccache-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ env.CACHE_WEEK }}-
+            ccache-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
+            ccache-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
+
+      - name: Restore Build Accelerator Cache / 恢复编译加速缓存
+        id: cache-build-accel
+        uses: actions/cache@v5
+        with:
+          path: |
+            ./openwrt/staging_dir/host
+            ./openwrt/staging_dir/hostpkg
+            ./openwrt/staging_dir/toolchain-*
+            ./openwrt/build_dir/host
+            ./openwrt/build_dir/toolchain-*
+          key: build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ hashFiles(format('devices/{0}/.config', inputs.model), env.DRIVER_CONFIG_PATH, env.DRIVER_CONFIG_HASH_GLOB) }}
+          restore-keys: |
+            build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
+            build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
+
+      - name: Warm Cached Stamps / 预热缓存时间戳
+        if: steps.cache-build-accel.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          if [ -d "$OPENWRT_PATH/staging_dir" ]; then
+            while IFS= read -r stamp_dir; do
+              find "$stamp_dir" -type f -exec touch {} +
+            done < <(find "$OPENWRT_PATH/staging_dir" -type d -name stamp -not -path "*target*" 2>/dev/null)
+            mkdir -p "$OPENWRT_PATH/tmp"
+            echo "1" > "$OPENWRT_PATH/tmp/.build"
+          fi
+
+      # ============================================================================
+      # Phase 5: Config + Feeds / 配置与软件源
+      # ============================================================================
+      - name: Load Base Config / 加载基础配置
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-base-config "$OPENWRT_PATH" "$CONFIG_FILE" "$GITHUB_WORKSPACE"
+
+      - name: Extend Driver Config / 追加驱动配置
+        if: env.EXTEND_DRIVER == 'true'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" extend-driver-config "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
+
+      - name: Snapshot Effective Config / 快照最终配置
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" snapshot-effective-config "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
+
+      - name: Load Custom Feeds / 加载自定义软件源
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-custom-feeds "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$FEEDS_CONF" "$DIY_P1_SH"
+
+      - name: Update Feeds / 更新软件源
+        run: cd "$OPENWRT_PATH" && ./scripts/feeds update -a
+
+      - name: Install Feeds / 安装软件源
+        run: cd "$OPENWRT_PATH" && ./scripts/feeds install -a
+
+      - name: Run General Script / 执行通用脚本
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" run-general-script "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
+
+      - name: Apply Package Overrides / 应用包覆盖规则
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" apply-package-overrides "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$PACKAGE_FILE"
+
+      - name: Load Custom Configuration / 加载自定义配置
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-custom-configuration "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$DIY_P2_SH"
+
+      # ============================================================================
+      # Phase 6: Build / 构建
+      # ============================================================================
+      - name: Download Dependencies / 下载依赖
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" download-dependencies "$OPENWRT_PATH"
+
+      - name: Compile Firmware / 编译固件
+        id: compile
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" compile-firmware "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GITHUB_OUTPUT" "$GITHUB_ENV"
+
+      - name: Upload Compile Log / 上传编译日志
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compile-log-${{ inputs.model }}-${{ github.run_id }}
+          path: ${{ github.workspace }}/compile.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Dump Failure Context / 输出失败上下文
+        if: steps.compile.outputs.status == 'failure'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" dump-failure-context "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
+
+      - name: Fail Build On Compile Error / 编译失败终止
+        if: steps.compile.outputs.status == 'failure'
+        run: exit 1
+
+      - name: Optimize Build Directories / 优化构建目录
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" optimize-build-dirs "$OPENWRT_PATH"
+
+      - name: Check Disk Usage / 检查磁盘使用
+        if: (!cancelled())
+        run: df -hT
+
+      - name: Organize Firmware Files / 整理固件文件
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" organize-firmware-files "$OPENWRT_PATH" "$GITHUB_ENV"
+
+      - name: Generate SHA256 Checksums / 生成 SHA256 校验
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" generate-sha256 "$FIRMWARE_PATH"
+
+      - name: Detect Default Access Info / 检测默认访问信息
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/detect-default-access.sh" "$OPENWRT_PATH" "$GITHUB_ENV"
+
+      # ============================================================================
+      # Phase 7: Release / 发布
+      # ============================================================================
+      - name: Generate Release Tag / 生成发布标签
+        id: tag
+        if: env.FIRMWARE_RELEASE == 'true' && !cancelled()
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/release-maintenance.sh" generate-release-tag "$GITHUB_OUTPUT"
+
+      - name: Prepare Release Metadata / 生成发布元数据
+        if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE == 'true'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/release-maintenance.sh" prepare-release-metadata \
+            "$GITHUB_WORKSPACE" \
+            "$GITHUB_ENV" \
+            "$SOURCE_REPO" \
+            "$REPO_BRANCH" \
+            "$FIRMWARE_TAG" \
+            "${{ inputs.model }}" \
+            "$REPO_URL" \
+            "$DEFAULT_IP" \
+            "$DEFAULT_IP_SOURCE" \
+            "$DEFAULT_PASSWORD" \
+            "$DEFAULT_PASSWORD_SOURCE" \
+            "$VERSION_INFO"
+
+      - name: Upload Firmware To Release / 发布固件到 Release
+        if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE == 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ env.RELEASE_NAME }}
+          allowUpdates: true
+          tag: ${{ env.RELEASE_TAG }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: ${{ env.FIRMWARE_PATH }}/*
+          bodyFile: ${{ env.RELEASE_BODY_FILE }}
+
+      # ============================================================================
+      # Phase 8: Maintenance / 维护清理
+      # ============================================================================
+      - name: Delete Workflow Runs / 清理工作流记录
+        if: ${{ !inputs.build_all || inputs.model == 'x86_64_LEDE' }}
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 2
+
+      - name: Remove Old Releases / 清理旧版本 Release
+        uses: dev-drprasad/delete-older-releases@master
+        if: env.FIRMWARE_RELEASE == 'true' && !cancelled() && (!inputs.build_all || inputs.model == 'x86_64_LEDE')
+        with:
+          keep_latest: 3
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,87 @@
+name: OpenWrt Builder
+run-name: OpenWrt Builder / 构建固件
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "设备配置 / Device Profile"
+        required: true
+        default: "x86_64_immortalWrt"
+        type: choice
+        options:
+          - x86_64_LEDE
+          - x86_64_immortalWrt
+          - Qualcommax_LEDE
+          - Qualcommax_V
+          - Qualcommax_B
+      build_all:
+        description: "并行构建全部设备 / Build all devices in parallel"
+        required: false
+        default: false
+        type: boolean
+  repository_dispatch:
+    types:
+      - source-code-update
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  Resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      model: ${{ steps.resolve.outputs.model }}
+      build_all: ${{ steps.resolve.outputs.build_all }}
+      matrix: ${{ steps.resolve.outputs.matrix }}
+    steps:
+      - name: Resolve Trigger Params / 解析触发参数
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODEL: ${{ github.event.inputs.model }}
+          INPUT_BUILD_ALL: ${{ github.event.inputs.build_all }}
+          PAYLOAD_MODEL: ${{ github.event.client_payload.model }}
+          PAYLOAD_BUILD_ALL: ${{ github.event.client_payload.build_all }}
+        run: |
+          set -euo pipefail
+
+          model="${INPUT_MODEL:-}"
+          build_all_raw="${INPUT_BUILD_ALL:-false}"
+
+          if [ "${EVENT_NAME}" = "repository_dispatch" ]; then
+            model="${PAYLOAD_MODEL:-}"
+            build_all_raw="${PAYLOAD_BUILD_ALL:-false}"
+          fi
+
+          [ -n "${model}" ] || model="x86_64_immortalWrt"
+
+          case "${build_all_raw}" in
+            true|TRUE|True|1|yes|YES|Yes) build_all="true" ;;
+            *) build_all="false" ;;
+          esac
+
+          if [ "${build_all}" = "true" ]; then
+            matrix='["x86_64_LEDE","x86_64_immortalWrt","Qualcommax_LEDE","Qualcommax_V","Qualcommax_B"]'
+          else
+            matrix="[\"${model}\"]"
+          fi
+
+          {
+            echo "model=${model}"
+            echo "build_all=${build_all}"
+            echo "matrix=${matrix}"
+          } >> "$GITHUB_OUTPUT"
+
+  Build:
+    needs: Resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJSON(needs.Resolve.outputs.matrix) }}
+    uses: ./.github/workflows/openwrt-build-reusable.yml
+    with:
+      model: ${{ matrix.model }}
+      build_all: ${{ needs.Resolve.outputs.build_all == 'true' }}
+    secrets: inherit

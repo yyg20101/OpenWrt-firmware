@@ -1,0 +1,92 @@
+#
+# https://github.com/P3TERX/Actions-OpenWrt
+#
+# File: .github/workflows/update-checker.yml
+# Description: Source code update checker
+#
+# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
+#
+# This is free software, licensed under the MIT License.
+# See /LICENSE for more information.
+#
+
+name: Update Checker
+
+env:
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_trigger_build:
+        description: "检测到更新后自动触发构建 / Auto trigger build when update is detected"
+        required: false
+        default: false
+        type: boolean
+      model:
+        description: "自动触发构建设备 / Auto build model"
+        required: false
+        default: "x86_64_immortalWrt"
+        type: choice
+        options:
+          - x86_64_LEDE
+          - x86_64_immortalWrt
+          - Qualcommax_LEDE
+          - Qualcommax_V
+          - Qualcommax_B
+      build_all:
+        description: "自动触发时构建全部设备 / Build all devices when auto-triggering"
+        required: false
+        default: false
+        type: boolean
+#  schedule:
+#    - cron: 0 */18 * * *
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Get Commit Hash
+      id: getHash
+      run: |
+        git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" .
+        echo "commitHash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Compare Commit Hash
+      id: cacheHash
+      uses: actions/cache@v5
+      with:
+        path: .commitHash
+        key: commitHash_${{ steps.getHash.outputs.commitHash }}
+
+    - name: Save New Commit Hash
+      if: steps.cacheHash.outputs.cache-hit != 'true'
+      run: |
+        echo "${{ steps.getHash.outputs.commitHash }}" | tee .commitHash
+
+    - name: Trigger build
+      if: steps.cacheHash.outputs.cache-hit != 'true' && github.event.inputs.auto_trigger_build == 'true'
+      uses: peter-evans/repository-dispatch@v4
+      with:
+        token: ${{ github.token }}
+        event-type: source-code-update
+        client-payload: |
+          {
+            "model": "${{ github.event.inputs.model || 'x86_64_immortalWrt' }}",
+            "build_all": "${{ github.event.inputs.build_all || 'false' }}",
+            "source": "update-checker"
+          }
+
+    - name: Skip Trigger Build (Auto Off) / 跳过自动触发（开关关闭）
+      if: steps.cacheHash.outputs.cache-hit != 'true' && github.event.inputs.auto_trigger_build != 'true'
+      run: |
+        echo "Update detected, but auto_trigger_build=false. Build was not triggered."
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        retain_days: 0
+        keep_minimum_runs: 2
