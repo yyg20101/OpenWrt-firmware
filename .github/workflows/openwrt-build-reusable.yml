@@ -141,6 +141,10 @@ jobs:
             ./openwrt/staging_dir/toolchain-*
           key: build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ hashFiles(format('devices/{0}/.config', inputs.model), env.DRIVER_CONFIG_PATH, env.DRIVER_CONFIG_HASH_GLOB) }}
           restore-keys: |
+            build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
+            build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
+            build-accel-v2-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
+            build-accel-v2-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
             build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
             build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
 
