@@ -33,7 +33,7 @@ env:
   DRIVER_CONFIG_HASH_GLOB: scripts/common/config/**/*.config
   GENERAL_SCRIPT_PATH: scripts/common/General.sh
   PACKAGE_BASE_SCRIPT_PATH: scripts/common/Packages.sh
-  BUILD_ACCEL_CACHE_SCHEMA: v2
+  BUILD_ACCEL_CACHE_SCHEMA: v3
   EXTEND_DRIVER: true
   FIRMWARE_RELEASE: true
   FIRMWARE_TAG: X86-64
@@ -139,12 +139,22 @@ jobs:
             ./openwrt/staging_dir/host
             ./openwrt/staging_dir/hostpkg
             ./openwrt/staging_dir/toolchain-*
-            ./openwrt/build_dir/host
-            ./openwrt/build_dir/toolchain-*
           key: build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ hashFiles(format('devices/{0}/.config', inputs.model), env.DRIVER_CONFIG_PATH, env.DRIVER_CONFIG_HASH_GLOB) }}
           restore-keys: |
             build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
             build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
+
+      - name: Show Cache Footprint / 显示缓存体积
+        run: |
+          set -euo pipefail
+          if [ -d "$OPENWRT_PATH/staging_dir" ]; then
+            echo "staging_dir cache payload:"
+            [ -d "$OPENWRT_PATH/staging_dir/host" ] && du -sh "$OPENWRT_PATH/staging_dir/host" || true
+            [ -d "$OPENWRT_PATH/staging_dir/hostpkg" ] && du -sh "$OPENWRT_PATH/staging_dir/hostpkg" || true
+            while IFS= read -r toolchain_dir; do
+              du -sh "$toolchain_dir"
+            done < <(find "$OPENWRT_PATH/staging_dir" -maxdepth 1 -type d -name 'toolchain-*' 2>/dev/null || true)
+          fi
 
       - name: Warm Cached Stamps / 预热缓存时间戳
         if: steps.cache-build-accel.outputs.cache-hit == 'true'
