@@ -33,7 +33,6 @@ env:
   DRIVER_CONFIG_HASH_GLOB: scripts/common/config/**/*.config
   GENERAL_SCRIPT_PATH: scripts/common/General.sh
   PACKAGE_BASE_SCRIPT_PATH: scripts/common/Packages.sh
-  BUILD_ACCEL_CACHE_SCHEMA: v3
   EXTEND_DRIVER: true
   FIRMWARE_RELEASE: true
   FIRMWARE_TAG: X86-64
@@ -139,12 +138,8 @@ jobs:
             ./openwrt/staging_dir/host
             ./openwrt/staging_dir/hostpkg
             ./openwrt/staging_dir/toolchain-*
-          key: build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ hashFiles(format('devices/{0}/.config', inputs.model), env.DRIVER_CONFIG_PATH, env.DRIVER_CONFIG_HASH_GLOB) }}
+          key: build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-${{ hashFiles(format('devices/{0}/.config', inputs.model), env.DRIVER_CONFIG_PATH, env.DRIVER_CONFIG_HASH_GLOB) }}
           restore-keys: |
-            build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
-            build-accel-${{ env.BUILD_ACCEL_CACHE_SCHEMA }}-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
-            build-accel-v2-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
-            build-accel-v2-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
             build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.CCACHE_GROUP }}-
             build-accel-${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-
 
