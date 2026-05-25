@@ -186,7 +186,12 @@ jobs:
         run: |
           set -euo pipefail
           bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" organize-firmware-files "$OPENWRT_PATH" "$GITHUB_ENV" "$GITHUB_OUTPUT"
-          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" generate-sha256 "$FIRMWARE_PATH"
+          firmware_path="$(awk -F= '$1 == "FIRMWARE_PATH" { print substr($0, index($0, "=") + 1) }' "$GITHUB_ENV" | tail -n 1)"
+          if [ -z "$firmware_path" ]; then
+            echo "ERROR: FIRMWARE_PATH was not exported by organize-firmware-files" >&2
+            exit 1
+          fi
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" generate-sha256 "$firmware_path"
 
       - name: Detect Default Access Info
         if: steps.compile.outputs.status == 'success'
