@@ -1,98 +1,131 @@
 # CI Workflow Architecture
 
-This repository uses a dispatcher + reusable workflow structure for OpenWrt firmware builds.
+This repository uses a declarative profile + reusable workflow structure for firmware builds.
+
+## Goals
+
+- Keep device metadata in one place.
+- Keep workflow YAML thin and orchestration-focused.
+- Make adding a device require a `.config` file and one `devices/profiles.yml` entry.
+- Standardize artifacts and Release metadata.
+- Keep validation runnable locally and in GitHub Actions.
 
 ## Entry Workflows
 
-- `.github/workflows/openwrt-builder.yml`
-  - Manual entry (`workflow_dispatch`) and optional auto entry (`repository_dispatch`).
-  - Expands model matrix (single model or build-all).
-  - Calls reusable workflow with `uses`.
+- `.github/workflows/firmware-ci.yml`
+  - Manual entry through `workflow_dispatch`.
+  - Optional automation entry through `repository_dispatch` with event type `firmware-ci`.
+  - Resolves `target` into a build matrix by calling `scripts/ci/profiles.sh matrix`.
+  - Accepts `target=<profile-id>` or `target=all`.
 
-- `.github/workflows/openwrt-build-reusable.yml`
-  - Contains the end-to-end build pipeline.
-  - Uses shell scripts in `scripts/ci` to keep YAML readable and testable.
+- `.github/workflows/firmware-build.yml`
+  - Reusable build implementation.
+  - Loads a single profile, initializes the runner, clones source, restores caches, configures feeds/packages, compiles firmware, uploads artifacts, and optionally publishes a Release.
 
 - `.github/workflows/ci-lint.yml`
-  - Validates workflows, shell syntax, and device env schema.
+  - Validates workflow YAML.
+  - Validates shell syntax.
+  - Validates `devices/profiles.yml`.
+  - Validates Dependabot ecosystem coverage.
 
-- `.github/workflows/update-checker.yml`
-  - Compares upstream commit hash.
-  - Supports `auto_trigger_build` switch (default `false`).
-  - When switch is on and update is detected, dispatches `source-code-update` to builder.
+## Profile Contract
 
-## Build Assets
+The authoritative device registry is `devices/profiles.yml`.
 
-- Shared defaults are located in `scripts/common/` by default:
-  - `Driver.config`
-  - `General.sh`
-  - `Packages.sh`
-  - `diy-part1.sh`
-  - `diy-part1-helloworld.sh`
-  - `diy-part2.sh`
-  - `package`
+Required fields per profile:
 
-- Path variables (workflow `env`) can override shared defaults without changing scripts:
-  - `DRIVER_CONFIG_PATH` (single file)
-  - `DRIVER_CONFIG_GLOB` (additional fragments, sorted append)
-  - `GENERAL_SCRIPT_PATH`
-  - `PACKAGE_BASE_SCRIPT_PATH`
-  - `DRIVER_CONFIG_HASH_GLOB` (cache key invalidation scope)
+- `title`
+- `enabled`
+- `source_repo`
+- `source_branch`
+- `firmware_tag`
+- `cache_group`
+- `config`
 
-- Device overrides are located in `devices/<model>/`.
+Shared defaults may define:
 
-- Resolution order (high to low priority):
-  1. `devices/<model>/...` (device-specific override)
-  2. shared defaults from `scripts/common/...`
+- `timezone`
+- `config_fragments`
+- `feeds_conf`
+- `pre_feeds_script`
+- `post_feeds_script`
+- `general_script`
+- `package_base_script`
+- `package_overlay_script`
+- `make_download_jobs`
+
+`scripts/ci/profiles.sh export-env` writes profile values to both `GITHUB_ENV` and `GITHUB_OUTPUT`, so shell steps and action expressions use the same resolved contract.
+
+## Build Flow
+
+```text
+Firmware CI
+  -> Resolve target from workflow_dispatch/repository_dispatch
+  -> Generate matrix from devices/profiles.yml
+  -> Firmware Build(profile)
+    -> Load profile
+    -> Initialize runner
+    -> Clone OpenWrt source
+    -> Restore ccache and build accelerator cache
+    -> Load .config and config fragments
+    -> Prepare feeds and run pre-feeds script
+    -> Update/install feeds
+    -> Run general script
+    -> Apply package overlays
+    -> Run post-feeds script
+    -> Download dependencies
+    -> Compile with fallback
+    -> Organize artifacts and checksums
+    -> Detect default access
+    -> Upload Artifact and optional Release
+```
 
 ## CI Script Modules
 
-- `scripts/ci/load-device-profile.sh`
-  - Resolves device env overrides.
-  - Selects `CONFIG_FILE`, `FEEDS_CONF`, `DIY_P1_SH`, `DIY_P2_SH`, `PACKAGE_FILE`.
-  - Computes `CCACHE_GROUP`.
+- `scripts/ci/profiles.sh`
+  - Validates profile schema.
+  - Lists profile ids.
+  - Generates build matrix JSON.
+  - Exports one profile as environment variables and step outputs.
 
-- `scripts/ci/generate-build-vars.sh`
-  - Exports `SOURCE_REPO`, `WRT_HASH`, `CACHE_WEEK`.
+- `scripts/ci/load-device-profile.sh`
+  - Compatibility wrapper around `profiles.sh export-env`.
 
 - `scripts/ci/config-feeds.sh`
-  - Handles phase-5 config and feeds operations:
-    - load/snapshot config
-    - extend driver config
-    - custom feeds scripts
-    - package override script
-    - custom `files` + `diy-part2`
+  - Loads base config.
+  - Appends declared config fragments.
+  - Runs feeds and customization hooks.
+  - Applies package overlays.
 
 - `scripts/ci/build-artifacts.sh`
-  - Handles phase-6 build and artifact operations:
-    - dependency download
-    - compile with fallback strategies
-    - failure context dump
-    - artifact organize
-    - checksum generation
+  - Downloads dependencies.
+  - Compiles with fallback strategies.
+  - Dumps failure context.
+  - Organizes firmware files and checksums.
 
 - `scripts/ci/detect-default-access.sh`
-  - Detects default LAN IP and root password state.
-  - Emits source trace for release notes.
+  - Detects default LAN IP and root password state from source/rootfs outputs.
 
 - `scripts/ci/release-maintenance.sh`
-  - Generates release tag.
-  - Prepares release name/tag/body file metadata.
+  - Generates standardized Release name, tag, body file, and action outputs.
 
-- `scripts/ci/validate-device-env.sh`
-  - Schema checks for `devices/*/env`.
+- `scripts/ci/validate-profiles.sh`
+  - CI-facing profile validation wrapper.
 
 - `scripts/ci/validate-dependabot-coverage.sh`
-  - Detects whether npm/pip/docker manifests exist.
-  - Fails CI if manifests are present but matching Dependabot ecosystem is missing.
+  - Detects npm/pip/docker manifests and requires matching Dependabot ecosystems.
 
 ## Maintenance Rules
 
-- Prefer adding logic to `scripts/ci/*.sh` rather than inline YAML.
-- Keep workflow steps thin and focused on orchestration.
-- Preserve exported env/output variable names when refactoring.
-- Run local checks before pushing:
-  - workflow YAML parse
-  - shell syntax check
-  - device env schema validation
-  - dependabot coverage validation
+- Add device metadata only in `devices/profiles.yml`.
+- Add device OpenWrt config under `devices/<profile-id>/.config`.
+- Keep long shell logic in `scripts/ci/*.sh`, not workflow YAML.
+- Preserve profile output names when refactoring cache, artifact, or Release behavior.
+- Run local validation before pushing:
+
+```bash
+ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"
+find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
+bash scripts/ci/validate-profiles.sh
+bash scripts/ci/validate-dependabot-coverage.sh
+```

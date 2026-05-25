@@ -11,10 +11,11 @@ append_line() {
 
 download_dependencies() {
   local openwrt_path="$1"
+  local jobs="${2:-${MAKE_DOWNLOAD_JOBS:-8}}"
 
   cd "${openwrt_path}"
   make defconfig
-  make download -j8
+  make download -j"${jobs}"
   find dl -size -1024c -exec ls -l {} \;
   find dl -size -1024c -exec rm -f {} \;
 }
@@ -92,13 +93,29 @@ optimize_build_directories() {
 organize_firmware_files() {
   local openwrt_path="$1"
   local env_target="${2:-${GITHUB_ENV:-}}"
+  local output_target="${3:-${GITHUB_OUTPUT:-}}"
+  local target_dir
 
-  cd "${openwrt_path}/bin/targets"/*/*
-  find "${openwrt_path}/bin/packages/" -type f \( -name "*.ipk" -o -name "*.apk" \) -exec mv -f {} packages/ \;
+  target_dir="$(find "${openwrt_path}/bin/targets" -mindepth 2 -maxdepth 2 -type d | sort | head -n1 || true)"
+  if [ -z "${target_dir}" ] || [ ! -d "${target_dir}" ]; then
+    echo "ERROR: firmware target directory not found under ${openwrt_path}/bin/targets" >&2
+    exit 1
+  fi
+
+  cd "${target_dir}"
+  mkdir -p packages
+  if [ -d "${openwrt_path}/bin/packages" ]; then
+    find "${openwrt_path}/bin/packages/" -type f \( -name "*.ipk" -o -name "*.apk" \) -exec mv -f {} packages/ \;
+  fi
   tar -zcf Packages.tar.gz packages
   cp "${openwrt_path}/.config" build.config
+  find . -maxdepth 1 -type f ! -name artifact-manifest.txt ! -name artifact-manifest.tmp -print | while IFS= read -r file; do
+    basename "${file}"
+  done | sort > artifact-manifest.tmp
+  mv artifact-manifest.tmp artifact-manifest.txt
   rm -rf packages
   append_line "${env_target}" "FIRMWARE_PATH=${PWD}"
+  append_line "${output_target}" "firmware_path=${PWD}"
 }
 
 generate_sha256_checksums() {
@@ -121,7 +138,7 @@ generate_sha256_checksums() {
 SUBCOMMAND="${1:-}"
 case "${SUBCOMMAND}" in
   download-dependencies)
-    download_dependencies "${2:-}"
+    download_dependencies "${2:-}" "${3:-${MAKE_DOWNLOAD_JOBS:-8}}"
     ;;
   compile-firmware)
     compile_firmware "${2:-}" "${3:-${GITHUB_WORKSPACE:-$(pwd)}}" "${4:-${GITHUB_OUTPUT:-}}" "${5:-${GITHUB_ENV:-}}"
@@ -133,7 +150,7 @@ case "${SUBCOMMAND}" in
     optimize_build_directories "${2:-}"
     ;;
   organize-firmware-files)
-    organize_firmware_files "${2:-}" "${3:-${GITHUB_ENV:-}}"
+    organize_firmware_files "${2:-}" "${3:-${GITHUB_ENV:-}}" "${4:-${GITHUB_OUTPUT:-}}"
     ;;
   generate-sha256)
     generate_sha256_checksums "${2:-}"

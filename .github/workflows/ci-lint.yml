@@ -6,6 +6,7 @@ on:
       - ".github/workflows/**"
       - "scripts/**"
       - "devices/**"
+      - "docs/**"
   push:
     branches:
       - main
@@ -14,6 +15,7 @@ on:
       - ".github/workflows/**"
       - "scripts/**"
       - "devices/**"
+      - "docs/**"
 
 permissions:
   contents: read
@@ -42,10 +44,10 @@ jobs:
           find scripts -type f -name "*.sh" -print0 \
             | xargs -0 -n1 bash -n
 
-      - name: Validate Device Env / 校验设备 env
+      - name: Validate Firmware Profiles / 校验固件配置
         run: |
           set -euo pipefail
-          bash scripts/ci/validate-device-env.sh
+          bash scripts/ci/validate-profiles.sh
 
       - name: Validate Dependabot Coverage / 校验 Dependabot 覆盖
         run: |

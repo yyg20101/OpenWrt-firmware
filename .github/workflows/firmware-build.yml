@@ -1,0 +1,222 @@
+name: Firmware Build
+run-name: ${{ format('Firmware Build / {0}', inputs.profile) }}
+
+on:
+  workflow_call:
+    inputs:
+      profile:
+        description: "Profile id from devices/profiles.yml"
+        required: true
+        type: string
+      release:
+        description: "Publish successful build to GitHub Releases"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build:
+    name: Build ${{ inputs.profile }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    env:
+      OPENWRT_DIR: openwrt
+    steps:
+      - name: Maximize Build Space
+        uses: easimon/maximize-build-space@v10
+        with:
+          swap-size-mb: 1024
+          temp-reserve-mb: 100
+          root-reserve-mb: 1024
+
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Load Firmware Profile
+        id: profile
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/load-device-profile.sh" "${{ inputs.profile }}" "$GITHUB_ENV" "$GITHUB_WORKSPACE" "$GITHUB_OUTPUT"
+
+      - name: Initialize Build Environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android "$AGENT_TOOLSDIRECTORY" || true
+          sudo -E apt-get -qq update
+          sudo bash -c 'bash <(curl -fsSL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo -E apt-get -qq install \
+            ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache \
+            clang cmake cpio curl device-tree-compiler file flex gawk gcc-multilib g++-multilib gettext \
+            genisoimage git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev \
+            jq libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libncurses5-dev \
+            libncursesw5-dev libpython3-dev libreadline-dev libssl-dev libtool llvm lrzsz msmtp ninja-build \
+            p7zip p7zip-full patch pkgconf python3 python3-pyelftools python3-setuptools \
+            qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget \
+            xmlto xxd zlib1g-dev
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+          sudo timedatectl set-timezone "$TZ"
+
+      - name: Show Runner Summary
+        run: |
+          set -euo pipefail
+          echo "Profile: $PROFILE_TITLE ($PROFILE_ID)"
+          echo "Source: $REPO_URL / $REPO_BRANCH"
+          echo "Profile hash: $PROFILE_HASH"
+          echo "CPU: $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)"
+          echo "Cores: $(nproc)"
+          free -h
+          df -hT /
+
+      - name: Clone OpenWrt Source
+        id: source
+        run: |
+          set -euo pipefail
+          git clone --single-branch --depth=1 "$REPO_URL" -b "$REPO_BRANCH" "$OPENWRT_DIR"
+          cd "$OPENWRT_DIR"
+          wrt_hash="$(git rev-parse --short HEAD)"
+          source_commit="$(git rev-parse HEAD)"
+          source_commit_date="$(git show -s --date=iso-strict --format='%cd' HEAD)"
+          source_commit_subject="$(git show -s --format='%s' HEAD)"
+          cache_week="$(date +%Y-%W)"
+          {
+            echo "OPENWRT_PATH=$PWD"
+            echo "WRT_HASH=${wrt_hash}"
+            echo "SOURCE_COMMIT=${source_commit}"
+            echo "SOURCE_COMMIT_DATE=${source_commit_date}"
+            echo "SOURCE_COMMIT_SUBJECT=${source_commit_subject}"
+            echo "CACHE_WEEK=${cache_week}"
+          } >> "$GITHUB_ENV"
+          {
+            echo "openwrt_path=$PWD"
+            echo "wrt_hash=${wrt_hash}"
+            echo "source_commit=${source_commit}"
+            echo "source_commit_date=${source_commit_date}"
+            echo "source_commit_subject=${source_commit_subject}"
+            echo "cache_week=${cache_week}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Restore ccache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENWRT_DIR }}/.ccache
+          key: ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}-${{ steps.source.outputs.wrt_hash }}
+          restore-keys: |
+            ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}-
+            ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
+
+      - name: Restore Build Accelerator Cache
+        id: cache-build-accel
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ env.OPENWRT_DIR }}/staging_dir/host
+            ${{ env.OPENWRT_DIR }}/staging_dir/hostpkg
+            ${{ env.OPENWRT_DIR }}/staging_dir/toolchain-*
+          key: build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.profile.outputs.profile_hash }}-${{ steps.source.outputs.wrt_hash }}
+          restore-keys: |
+            build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.profile.outputs.profile_hash }}-
+            build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
+
+      - name: Warm Cached Stamps
+        if: steps.cache-build-accel.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          if [ -d "$OPENWRT_PATH/staging_dir" ]; then
+            find "$OPENWRT_PATH/staging_dir" -type d -name stamp -not -path "*target*" -print0 \
+              | xargs -0 -r -I{} find "{}" -type f -exec touch {} +
+            mkdir -p "$OPENWRT_PATH/tmp"
+            echo "1" > "$OPENWRT_PATH/tmp/.build"
+          fi
+
+      - name: Configure Firmware
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-base-config "$OPENWRT_PATH" "$CONFIG_FILE" "$GITHUB_WORKSPACE"
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" append-config-fragments "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$CONFIG_FRAGMENTS"
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" snapshot-effective-config "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" prepare-feeds "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$FEEDS_CONF" "$PRE_FEEDS_SCRIPT"
+          cd "$OPENWRT_PATH"
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" run-general-script "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GENERAL_SCRIPT"
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" apply-package-overrides "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$PACKAGE_BASE_SCRIPT" "$PACKAGE_OVERLAY_SCRIPT"
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-custom-configuration "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$POST_FEEDS_SCRIPT"
+
+      - name: Download Dependencies
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" download-dependencies "$OPENWRT_PATH" "$MAKE_DOWNLOAD_JOBS"
+
+      - name: Compile Firmware
+        id: compile
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" compile-firmware "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GITHUB_OUTPUT" "$GITHUB_ENV"
+
+      - name: Upload Compile Log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compile-log-${{ inputs.profile }}-${{ github.run_id }}
+          path: ${{ github.workspace }}/compile.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Dump Failure Context
+        if: steps.compile.outputs.status == 'failure'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" dump-failure-context "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
+
+      - name: Fail Build On Compile Error
+        if: steps.compile.outputs.status == 'failure'
+        run: exit 1
+
+      - name: Organize Firmware Files
+        id: artifacts
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" organize-firmware-files "$OPENWRT_PATH" "$GITHUB_ENV" "$GITHUB_OUTPUT"
+          bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" generate-sha256 "$FIRMWARE_PATH"
+
+      - name: Detect Default Access Info
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/detect-default-access.sh" "$OPENWRT_PATH" "$GITHUB_ENV"
+
+      - name: Prepare Release Metadata
+        id: release
+        if: steps.compile.outputs.status == 'success'
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/release-maintenance.sh" prepare-release-metadata "$GITHUB_WORKSPACE" "$GITHUB_ENV" "$FIRMWARE_PATH" "$GITHUB_OUTPUT"
+
+      - name: Upload Firmware Artifact
+        if: steps.compile.outputs.status == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-${{ inputs.profile }}-${{ github.run_id }}
+          path: ${{ steps.artifacts.outputs.firmware_path }}/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release
+        if: steps.compile.outputs.status == 'success' && inputs.release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ steps.release.outputs.release_name }}
+          tag: ${{ steps.release.outputs.release_tag }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: ${{ steps.artifacts.outputs.firmware_path }}/*
+          bodyFile: ${{ steps.release.outputs.release_body_file }}
+          allowUpdates: false

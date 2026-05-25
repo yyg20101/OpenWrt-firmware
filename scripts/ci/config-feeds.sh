@@ -22,59 +22,29 @@ load_base_config() {
   cp "${config_path}" "${openwrt_path}/.config"
 }
 
-extend_driver_config() {
+append_config_fragments() {
   local openwrt_path="$1"
   local workspace="$2"
-  local driver_config_path="${DRIVER_CONFIG_PATH:-scripts/common/Driver.config}"
-  local driver_config_glob="${DRIVER_CONFIG_GLOB:-}"
-  local config_path
-  local driver_config
-  local existing
-  local -a config_files=()
-  local glob_path
-  local shell_globstar
-  local shell_nullglob
+  local config_fragments="${3:-}"
+  local fragment
+  local fragment_path
 
-  add_config_file() {
-    local candidate="$1"
-    for existing in "${config_files[@]}"; do
-      if [ "${existing}" = "${candidate}" ]; then
-        return
-      fi
-    done
-    config_files+=("${candidate}")
-  }
-
-  config_path="$(resolve_path "${workspace}" "${driver_config_path}")"
-  if [ -f "${config_path}" ]; then
-    add_config_file "${config_path}"
-  fi
-
-  if [ -n "${driver_config_glob}" ]; then
-    if [[ "${driver_config_glob}" = /* ]]; then
-      glob_path="${driver_config_glob}"
-    else
-      glob_path="${workspace}/${driver_config_glob}"
-    fi
-    shell_globstar="$(shopt -p globstar || true)"
-    shell_nullglob="$(shopt -p nullglob || true)"
-    shopt -s globstar nullglob
-    while IFS= read -r driver_config; do
-      [ -f "${driver_config}" ] && add_config_file "${driver_config}"
-    done < <(compgen -G "${glob_path}" | sort || true)
-    eval "${shell_globstar:-:}"
-    eval "${shell_nullglob:-:}"
-  fi
-
-  if [ "${#config_files[@]}" -eq 0 ]; then
-    echo "No driver config files found (DRIVER_CONFIG_PATH='${driver_config_path}', DRIVER_CONFIG_GLOB='${driver_config_glob}'), skip."
+  if [ -z "${config_fragments}" ]; then
+    echo "No config fragments configured, skip."
     return
   fi
 
   echo "" >> "${openwrt_path}/.config"
-  for driver_config in "${config_files[@]}"; do
-    echo "Append driver config: ${driver_config}"
-    cat "${driver_config}" >> "${openwrt_path}/.config"
+  IFS=':' read -r -a fragments <<< "${config_fragments}"
+  for fragment in "${fragments[@]}"; do
+    [ -n "${fragment}" ] || continue
+    fragment_path="$(resolve_path "${workspace}" "${fragment}")"
+    if [ ! -f "${fragment_path}" ]; then
+      echo "ERROR: config fragment missing: ${fragment}" >&2
+      exit 1
+    fi
+    echo "Append config fragment: ${fragment}"
+    cat "${fragment_path}" >> "${openwrt_path}/.config"
     echo "" >> "${openwrt_path}/.config"
   done
 }
@@ -82,39 +52,48 @@ extend_driver_config() {
 snapshot_effective_config() {
   local openwrt_path="$1"
   local workspace="$2"
-  cp "${openwrt_path}/.config" "${workspace}/.merged.config"
+  cp "${openwrt_path}/.config" "${workspace}/effective.config"
 }
 
-load_custom_feeds() {
+prepare_feeds() {
   local openwrt_path="$1"
   local workspace="$2"
   local feeds_conf="$3"
-  local diy_p1_sh="$4"
+  local pre_feeds_script="$4"
 
   if [ -n "${feeds_conf}" ]; then
     local feeds_conf_path
     feeds_conf_path="$(resolve_path "${workspace}" "${feeds_conf}")"
-    [ -f "${feeds_conf_path}" ] && mv "${feeds_conf_path}" "${openwrt_path}/feeds.conf.default"
+    if [ ! -f "${feeds_conf_path}" ]; then
+      echo "ERROR: feeds config missing: ${feeds_conf}" >&2
+      exit 1
+    fi
+    cp "${feeds_conf_path}" "${openwrt_path}/feeds.conf.default"
   fi
 
-  if [ -n "${diy_p1_sh}" ]; then
-    local diy_p1_path
-    diy_p1_path="$(resolve_path "${workspace}" "${diy_p1_sh}")"
-    if [ -f "${diy_p1_path}" ]; then
-      chmod +x "${diy_p1_path}"
+  if [ -n "${pre_feeds_script}" ]; then
+    local pre_feeds_path
+    pre_feeds_path="$(resolve_path "${workspace}" "${pre_feeds_script}")"
+    if [ -f "${pre_feeds_path}" ]; then
+      chmod +x "${pre_feeds_path}"
       cd "${openwrt_path}"
-      "${diy_p1_path}"
+      "${pre_feeds_path}"
       return
     fi
   fi
-  echo "DIY_P1_SH missing, skip."
+  echo "Pre-feeds script missing, skip."
 }
 
 run_general_script() {
   local openwrt_path="$1"
   local workspace="$2"
-  local general_script_path="${GENERAL_SCRIPT_PATH:-scripts/common/General.sh}"
+  local general_script_path="${3:-}"
   local general_script
+
+  if [ -z "${general_script_path}" ]; then
+    echo "General script not configured, skip."
+    return
+  fi
 
   general_script="$(resolve_path "${workspace}" "${general_script_path}")"
   if [ -f "${general_script}" ]; then
@@ -129,8 +108,8 @@ run_general_script() {
 apply_package_overrides() {
   local openwrt_path="$1"
   local workspace="$2"
-  local package_file="$3"
-  local package_base_script_path="${PACKAGE_BASE_SCRIPT_PATH:-scripts/common/Packages.sh}"
+  local package_base_script_path="$3"
+  local package_file="$4"
   local package_base_script
 
   if [ -z "${package_file}" ]; then
@@ -165,24 +144,24 @@ apply_package_overrides() {
 load_custom_configuration() {
   local openwrt_path="$1"
   local workspace="$2"
-  local diy_p2_sh="$3"
+  local post_feeds_script="$3"
 
   [ -e "${workspace}/files" ] && mv "${workspace}/files" "${openwrt_path}/files"
-  if [ -f "${workspace}/.merged.config" ]; then
-    cp "${workspace}/.merged.config" "${openwrt_path}/.config"
+  if [ -f "${workspace}/effective.config" ]; then
+    cp "${workspace}/effective.config" "${openwrt_path}/.config"
   fi
 
-  if [ -n "${diy_p2_sh}" ]; then
-    local diy_p2_path
-    diy_p2_path="$(resolve_path "${workspace}" "${diy_p2_sh}")"
-    if [ -f "${diy_p2_path}" ]; then
-      chmod +x "${diy_p2_path}"
+  if [ -n "${post_feeds_script}" ]; then
+    local post_feeds_path
+    post_feeds_path="$(resolve_path "${workspace}" "${post_feeds_script}")"
+    if [ -f "${post_feeds_path}" ]; then
+      chmod +x "${post_feeds_path}"
       cd "${openwrt_path}"
-      "${diy_p2_path}"
+      "${post_feeds_path}"
       return
     fi
   fi
-  echo "DIY_P2_SH missing, skip."
+  echo "Post-feeds script missing, skip."
 }
 
 SUBCOMMAND="${1:-}"
@@ -190,27 +169,27 @@ case "${SUBCOMMAND}" in
   load-base-config)
     load_base_config "${2:-}" "${3:-}" "${4:-}"
     ;;
-  extend-driver-config)
-    extend_driver_config "${2:-}" "${3:-}"
+  append-config-fragments)
+    append_config_fragments "${2:-}" "${3:-}" "${4:-}"
     ;;
   snapshot-effective-config)
     snapshot_effective_config "${2:-}" "${3:-}"
     ;;
-  load-custom-feeds)
-    load_custom_feeds "${2:-}" "${3:-}" "${4:-}" "${5:-}"
+  prepare-feeds)
+    prepare_feeds "${2:-}" "${3:-}" "${4:-}" "${5:-}"
     ;;
   run-general-script)
-    run_general_script "${2:-}" "${3:-}"
+    run_general_script "${2:-}" "${3:-}" "${4:-}"
     ;;
   apply-package-overrides)
-    apply_package_overrides "${2:-}" "${3:-}" "${4:-}"
+    apply_package_overrides "${2:-}" "${3:-}" "${4:-}" "${5:-}"
     ;;
   load-custom-configuration)
     load_custom_configuration "${2:-}" "${3:-}" "${4:-}"
     ;;
   *)
     echo "Usage: $0 <subcommand> [args...]" >&2
-    echo "Subcommands: load-base-config, extend-driver-config, snapshot-effective-config, load-custom-feeds, run-general-script, apply-package-overrides, load-custom-configuration" >&2
+    echo "Subcommands: load-base-config, append-config-fragments, snapshot-effective-config, prepare-feeds, run-general-script, apply-package-overrides, load-custom-configuration" >&2
     exit 1
     ;;
 esac

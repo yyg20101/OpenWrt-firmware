@@ -1,34 +1,31 @@
-# OpenWrt Firmware Build (GitHub Actions)
+# OpenWrt Firmware CI
 
-这个仓库用于构建多设备 OpenWrt/ImmortalWrt 固件，并通过 GitHub Actions 自动化完成：
-
-- 设备参数解析
-- 源码拉取、feeds 与自定义脚本处理
-- 编译与产物整理
-- Release 发布与清理
-- CI Lint 与 Dependabot 依赖升级检测
+这个仓库用于通过 GitHub Actions 构建多设备 OpenWrt/ImmortalWrt 固件。当前架构已重构为“声明式设备配置 + 动态构建矩阵 + 标准化 Release”的固件 CI 系统。
 
 ## Workflows
 
-- `OpenWrt Builder`
-  - 支持手动触发：`workflow_dispatch`
-  - 支持事件触发：`repository_dispatch`（`source-code-update`）
-  - `build_all=true` 时并行构建全部设备
+- `Firmware CI`
+  - 文件：`.github/workflows/firmware-ci.yml`
+  - 手动触发参数：
+    - `target`: `devices/profiles.yml` 中的 profile id，或 `all`
+    - `release`: 是否发布 GitHub Release
+  - 事件触发：`repository_dispatch`，事件类型为 `firmware-ci`
 
-- `Update Checker`
-  - 对比上游源码 commit
-  - 包含自动触发开关 `auto_trigger_build`（默认 `false`）
-  - 仅当检测到更新且开关开启时，才触发构建
+- `Firmware Build`
+  - 文件：`.github/workflows/firmware-build.yml`
+  - 可复用构建实现，负责环境初始化、源码克隆、缓存、配置、feeds、编译、产物整理、默认访问检测、Artifact 和 Release。
 
 - `CI Lint`
-  - workflow YAML 校验
-  - shell 语法校验
-  - 设备 `env` 规则校验
-  - Dependabot 覆盖检测（npm/pip/docker 清单与配置一致性）
+  - 文件：`.github/workflows/ci-lint.yml`
+  - 校验 workflow YAML、shell 语法、固件 profile、Dependabot 覆盖。
 
 ## Device Profiles
 
-设备配置位于 `devices/<model>/`，当前支持：
+设备不再使用分散的 `devices/<model>/env`。所有构建元数据集中在：
+
+- `devices/profiles.yml`
+
+当前 profile：
 
 - `x86_64_LEDE`
 - `x86_64_immortalWrt`
@@ -36,33 +33,69 @@
 - `Qualcommax_V`
 - `Qualcommax_B`
 
-常见文件：
+新增设备的最小步骤：
 
-- `.config`
-- `env`
-- `diy-part1.sh` / `diy-part2.sh`（可选）
-- `package`（可选）
+1. 新增 `devices/<profile-id>/.config`，只保留 target/subtarget/device 选择。
+2. 在 `devices/profiles.yml` 的 `profiles` 下新增一段 profile：
 
-## CI Scripts
+```yaml
+my_profile:
+  title: My Profile
+  enabled: true
+  source_repo: https://github.com/example/openwrt
+  source_branch: main
+  firmware_tag: my-platform
+  cache_group: my-cache-group
+  config: devices/my_profile/.config
+  config_fragments:
+    - scripts/common/config/<platform>.config
+```
 
-CI 逻辑已拆分到 `scripts/ci/`，便于维护与复用。完整说明见：
+通用固件能力来自 `scripts/common/config/common.config`；平台、源码系或设备族差异通过 profile 的 `config_fragments` 追加。
 
-- [CI Workflow Architecture](/Users/wajie/PycharmProjects/OpenWrt-firmware/docs/ci-workflow-architecture.md)
+3. 运行本地校验：
 
-共享构建资产默认位于 `scripts/common/`（如 `Driver.config`、`General.sh`、`Packages.sh`、`diy-part*.sh`），并可通过 workflow env 覆盖：
-- `DRIVER_CONFIG_PATH` / `DRIVER_CONFIG_GLOB`
-- `GENERAL_SCRIPT_PATH`
-- `PACKAGE_BASE_SCRIPT_PATH`
+```bash
+bash scripts/ci/validate-profiles.sh
+bash scripts/ci/profiles.sh matrix all "" "$PWD"
+```
 
-## Dependabot
+## Local Validation
 
-已启用 Dependabot（`github-actions` 生态）：
+提交前建议运行：
 
-- 配置文件：`.github/dependabot.yml`
-- 调度：每周一（Asia/Shanghai）
+```bash
+ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"
+find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
+bash scripts/ci/validate-profiles.sh
+bash scripts/ci/validate-dependabot-coverage.sh
+```
 
-当仓库新增 npm/pip/docker 清单但未配置对应 Dependabot 生态时，`CI Lint` 会失败并给出提示。
+## Release Contract
+
+成功构建后会上传 GitHub Artifact；当 `release=true` 时发布 GitHub Release。Release 内容必须包含：
+
+- profile id 和 title
+- platform tag
+- source repo、branch、commit、commit date、commit subject
+- profile hash
+- workflow run link
+- default IP 和检测来源
+- root password state 和检测来源
+- artifact 文件名和大小表
+
+Release tag 格式：
+
+```text
+firmware-<profile>-<source>-<branch>-<commit>-run<run-number>
+```
+
+## Documentation
+
+- [PRD](docs/firmware-ci-prd.md)
+- [CI Workflow Architecture](docs/ci-workflow-architecture.md)
+- [Codebase Notes](docs/codebase/)
 
 ## License
 
-- [MIT](/Users/wajie/PycharmProjects/OpenWrt-firmware/LICENSE)
+- [MIT](LICENSE)

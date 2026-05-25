@@ -1,0 +1,73 @@
+name: Firmware CI
+run-name: Firmware CI / ${{ github.event.inputs.target || github.event.client_payload.target || 'x86_64_immortalWrt' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Profile id from devices/profiles.yml, or all"
+        required: true
+        default: "x86_64_immortalWrt"
+        type: string
+      release:
+        description: "Publish successful builds to GitHub Releases"
+        required: false
+        default: true
+        type: boolean
+  repository_dispatch:
+    types:
+      - firmware-ci
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  resolve:
+    name: Resolve Build Matrix
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+      release: ${{ steps.resolve.outputs.release }}
+      target: ${{ steps.resolve.outputs.target }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Resolve Target
+        id: resolve
+        env:
+          INPUT_TARGET: ${{ github.event.inputs.target }}
+          INPUT_RELEASE: ${{ github.event.inputs.release }}
+          PAYLOAD_TARGET: ${{ github.event.client_payload.target }}
+          PAYLOAD_RELEASE: ${{ github.event.client_payload.release }}
+        run: |
+          set -euo pipefail
+
+          target="${INPUT_TARGET:-${PAYLOAD_TARGET:-x86_64_immortalWrt}}"
+          release_raw="${INPUT_RELEASE:-${PAYLOAD_RELEASE:-true}}"
+
+          case "${release_raw}" in
+            true|TRUE|True|1|yes|YES|Yes) release="true" ;;
+            *) release="false" ;;
+          esac
+
+          matrix="$(bash scripts/ci/profiles.sh matrix "${target}" "" "${GITHUB_WORKSPACE}")"
+
+          {
+            echo "target=${target}"
+            echo "release=${release}"
+            echo "matrix=${matrix}"
+          } >> "${GITHUB_OUTPUT}"
+
+  build:
+    name: Build ${{ matrix.profile }}
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.matrix) }}
+    uses: ./.github/workflows/firmware-build.yml
+    with:
+      profile: ${{ matrix.profile }}
+      release: ${{ needs.resolve.outputs.release == 'true' }}
+    secrets: inherit
