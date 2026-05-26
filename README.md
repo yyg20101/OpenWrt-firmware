@@ -83,6 +83,7 @@ bash scripts/ci/validate-dependabot-coverage.sh
 - default IP 和检测来源
 - root password state 和检测来源
 - artifact 文件名和大小表
+- Packages.tar.gz 内插件/包文件数量和清单
 
 Release tag 格式：
 

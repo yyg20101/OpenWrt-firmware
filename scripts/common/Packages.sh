@@ -69,7 +69,7 @@ UPDATE_PACKAGE() {
   local pkg_special="${4:-}"
   local custom_aliases="${5:-}"
 
-  require_cmds git find awk grep cut tail rm cp mv
+  require_cmds git find awk grep cut tail rm cp mv dirname tr
 
   if ! validate_pkg_name "$pkg_name"; then
     echo "ERROR: invalid package name: $pkg_name" >&2
@@ -132,12 +132,35 @@ UPDATE_PACKAGE() {
     # Extract matched package dirs from monorepo-style source
     # 从大仓库中提取匹配包目录
     local matched=0
-    while IFS= read -r -d '' dir; do
+    while IFS= read -r -d '' makefile; do
+      local dir
+      local dir_name
+      local dir_name_lc
+      local pkg_name_lc
+      dir="$(dirname "$makefile")"
+      dir_name="${dir##*/}"
+      dir_name_lc="$(printf '%s' "$dir_name" | tr '[:upper:]' '[:lower:]')"
+      pkg_name_lc="$(printf '%s' "$pkg_name" | tr '[:upper:]' '[:lower:]')"
+      [[ "$dir_name_lc" == *"$pkg_name_lc"* ]] || continue
       cp -rf "$dir" ./
       matched=1
-    done < <(find "./$repo_name" -mindepth 2 -maxdepth 4 -type d -iname "*$pkg_name*" -print0 2>/dev/null || true)
+    done < <(find "./$repo_name" -mindepth 2 -maxdepth 5 -type f -name "Makefile" -print0 2>/dev/null || true)
     if [ "$matched" -ne 1 ]; then
       echo "ERROR: pkg mode enabled but no directory matched pattern '*$pkg_name*' in $repo_name" >&2
+      rm -rf "./$repo_name/"
+      return 1
+    fi
+    rm -rf "./$repo_name/"
+  elif [[ "$pkg_special" == "all" ]]; then
+    # Extract every top-level package directory that contains a Makefile.
+    # 从大仓库中提取所有顶层 OpenWrt 包目录。
+    local copied=0
+    while IFS= read -r -d '' makefile; do
+      cp -rf "$(dirname "$makefile")" ./
+      copied=1
+    done < <(find "./$repo_name" -mindepth 2 -maxdepth 2 -type f -name "Makefile" -print0 2>/dev/null || true)
+    if [ "$copied" -ne 1 ]; then
+      echo "ERROR: all mode enabled but no top-level package Makefile found in $repo_name" >&2
       rm -rf "./$repo_name/"
       return 1
     fi
@@ -198,5 +221,5 @@ UPDATE_VERSION() {
 # Usage examples:
 # UPDATE_PACKAGE "OpenAppFilter" "destan19/OpenAppFilter" "master" "" "custom_name1 custom_name2"
 # UPDATE_PACKAGE "open-app-filter" "destan19/OpenAppFilter" "master" "" "luci-app-appfilter oaf"
-# UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg/name，可选"
+# UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg/name/all，可选"
 # UPDATE_VERSION "sing-box"

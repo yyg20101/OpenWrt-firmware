@@ -38,6 +38,9 @@ prepare_release_metadata() {
   local release_tag
   local body_file="${workspace}/release-body.md"
   local artifact_table="${workspace}/release-artifacts.md"
+  local package_table="${workspace}/release-packages.md"
+  local package_count_file="${workspace}/release-package-count.txt"
+  local package_count="0"
 
   if [ -z "${firmware_path}" ] || [ ! -d "${firmware_path}" ]; then
     echo "ERROR: firmware path is missing or invalid: ${firmware_path}" >&2
@@ -61,6 +64,9 @@ prepare_release_metadata() {
       printf '| `%s` | `%s` |\n' "$(basename "${file}")" "$(du -h "${file}" | awk '{print $1}')"
     done
   } > "${artifact_table}"
+
+  generate_package_table "${firmware_path}" "${package_table}" "${package_count_file}"
+  package_count="$(cat "${package_count_file}")"
 
   cat > "${body_file}" <<EOF
 ## Firmware Build
@@ -89,6 +95,17 @@ prepare_release_metadata() {
 ## Artifacts
 
 $(cat "${artifact_table}")
+
+## Packages
+
+Packages.tar.gz contains ${package_count} package file(s).
+
+<details>
+<summary>Package list</summary>
+
+$(cat "${package_table}")
+
+</details>
 EOF
 
   append_env_line "${env_target}" "RELEASE_NAME=${release_name}"
@@ -97,6 +114,45 @@ EOF
   append_env_line "${output_target}" "release_name=${release_name}"
   append_env_line "${output_target}" "release_tag=${release_tag}"
   append_env_line "${output_target}" "release_body_file=${body_file}"
+}
+
+generate_package_table() {
+  local firmware_path="$1"
+  local table_file="$2"
+  local count_file="$3"
+  local package_archive="${firmware_path}/Packages.tar.gz"
+  local package_tmp
+  local package_count
+
+  echo "0" > "${count_file}"
+  if [ ! -f "${package_archive}" ]; then
+    echo "_No package archive found._" > "${table_file}"
+    return
+  fi
+
+  package_tmp="$(mktemp -d)"
+  if ! tar -xzf "${package_archive}" -C "${package_tmp}"; then
+    rm -rf "${package_tmp}"
+    echo "_Unable to read Packages.tar.gz._" > "${table_file}"
+    return
+  fi
+
+  package_count="$(find "${package_tmp}" -type f \( -name "*.ipk" -o -name "*.apk" \) -print | wc -l | awk '{print $1}')"
+  echo "${package_count}" > "${count_file}"
+
+  if [ "${package_count}" -eq 0 ]; then
+    echo "_No package files found in Packages.tar.gz._" > "${table_file}"
+  else
+    {
+      echo "| Package | Size |"
+      echo "|---------|------|"
+      find "${package_tmp}" -type f \( -name "*.ipk" -o -name "*.apk" \) -print | sort | while IFS= read -r file; do
+        printf '| `%s` | `%s` |\n' "$(basename "${file}")" "$(du -h "${file}" | awk '{print $1}')"
+      done
+    } > "${table_file}"
+  fi
+
+  rm -rf "${package_tmp}"
 }
 
 SUBCOMMAND="${1:-}"
