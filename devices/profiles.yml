@@ -33,6 +33,7 @@ profiles:
     config: devices/x86_64_immortalWrt/.config
     config_fragments:
       - scripts/common/config/x86-image.config
+      - scripts/common/config/immortalwrt-extra.config
 
   Qualcommax_LEDE:
     title: Qualcommax LEDE
