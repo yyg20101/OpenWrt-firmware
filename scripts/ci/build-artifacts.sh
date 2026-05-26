@@ -90,6 +90,23 @@ optimize_build_directories() {
   du -sh "${openwrt_path}/dl" 2>/dev/null || true
 }
 
+validate_firmware_artifacts() {
+  local target_dir="$1"
+  local config_file="$2"
+
+  if grep -q '^CONFIG_TARGET_x86_64=y$' "${config_file}"; then
+    if ! find "${target_dir}" -maxdepth 1 -type f -name "*-combined*.img.gz" | grep -q .; then
+      echo "ERROR: x86_64 build did not produce combined disk images." >&2
+      echo "Expected files matching: *-combined*.img.gz" >&2
+      echo "Available files:" >&2
+      find "${target_dir}" -maxdepth 1 -type f -print | while IFS= read -r file; do
+        printf '  %s\n' "$(basename "${file}")"
+      done | sort >&2
+      exit 1
+    fi
+  fi
+}
+
 organize_firmware_files() {
   local openwrt_path="$1"
   local env_target="${2:-${GITHUB_ENV:-}}"
@@ -101,6 +118,8 @@ organize_firmware_files() {
     echo "ERROR: firmware target directory not found under ${openwrt_path}/bin/targets" >&2
     exit 1
   fi
+
+  validate_firmware_artifacts "${target_dir}" "${openwrt_path}/.config"
 
   cd "${target_dir}"
   mkdir -p packages

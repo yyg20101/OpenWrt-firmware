@@ -2,8 +2,6 @@ version: 1
 
 defaults:
   timezone: Asia/Shanghai
-  config_fragments:
-    - scripts/common/config/common.config
   pre_feeds_script: scripts/common/diy-part1.sh
   post_feeds_script: scripts/common/diy-part2.sh
   general_script: scripts/common/General.sh
@@ -21,6 +19,7 @@ profiles:
     cache_group: x86_64
     config: devices/x86_64_LEDE/.config
     config_fragments:
+      - scripts/common/config/common.config
       - scripts/common/config/x86.config
       - scripts/common/config/lede-extra.config
 
@@ -32,9 +31,6 @@ profiles:
     firmware_tag: X86-64
     cache_group: x86_64
     config: devices/x86_64_immortalWrt/.config
-    config_fragments:
-      - scripts/common/config/x86.config
-      - scripts/common/config/immortalwrt-extra.config
 
   Qualcommax_LEDE:
     title: Qualcommax LEDE
@@ -45,6 +41,7 @@ profiles:
     cache_group: qualcommax
     config: devices/Qualcommax_LEDE/.config
     config_fragments:
+      - scripts/common/config/common.config
       - scripts/common/config/qualcommax-ipq60xx.config
       - scripts/common/config/lede-extra.config
 
@@ -57,6 +54,7 @@ profiles:
     cache_group: qualcommax
     config: devices/Qualcommax_V/.config
     config_fragments:
+      - scripts/common/config/common.config
       - scripts/common/config/qualcommax-ipq60xx.config
 
   Qualcommax_B:
@@ -68,4 +66,5 @@ profiles:
     cache_group: qualcommax
     config: devices/Qualcommax_B/.config
     config_fragments:
+      - scripts/common/config/common.config
       - scripts/common/config/qualcommax-ipq60xx.config
