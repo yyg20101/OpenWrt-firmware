@@ -31,6 +31,8 @@ profiles:
     firmware_tag: X86-64
     cache_group: x86_64
     config: devices/x86_64_immortalWrt/.config
+    config_fragments:
+      - scripts/common/config/x86-image.config
 
   Qualcommax_LEDE:
     title: Qualcommax LEDE
