@@ -82,6 +82,48 @@ def existing_paths(root, values)
   end
 end
 
+def config_assignment(lines, option)
+  lines.reverse_each do |line|
+    stripped = line.strip
+    return "n" if stripped == "# #{option} is not set"
+
+    match = stripped.match(/\A#{Regexp.escape(option)}=(.+)\z/)
+    return match[1] if match
+  end
+
+  nil
+end
+
+def merged_config_lines(root, profile, id)
+  paths = [profile.fetch("config")]
+  paths.concat(array_value(profile["config_fragments"], "profile #{id} config_fragments"))
+  paths.flat_map do |path_value|
+    path = absolute_path(root, path_value)
+    path.read.lines
+  end
+end
+
+def validate_x86_image_options!(root, id, profile)
+  lines = merged_config_lines(root, profile, id)
+  return unless config_assignment(lines, "CONFIG_TARGET_x86_64") == "y"
+
+  required = {
+    "CONFIG_TARGET_KERNEL_PARTSIZE" => "128",
+    "CONFIG_TARGET_ROOTFS_PARTSIZE" => "1024",
+    "CONFIG_TARGET_ROOTFS_EXT4FS" => "y",
+    "CONFIG_GRUB_IMAGES" => "y",
+    "CONFIG_GRUB_EFI_IMAGES" => "y",
+    "CONFIG_VMDK_IMAGES" => "y"
+  }
+
+  required.each do |option, expected|
+    actual = config_assignment(lines, option)
+    next if actual == expected
+
+    fail!("profile #{id} requires #{option}=#{expected} for x86 image output, got #{actual || "unset"}")
+  end
+end
+
 def validate_profile!(root, id, raw_profile, defaults)
   fail!("profile #{id} must be a map") unless raw_profile.is_a?(Hash)
 
@@ -102,6 +144,8 @@ def validate_profile!(root, id, raw_profile, defaults)
   %w[feeds_conf pre_feeds_script post_feeds_script general_script package_base_script package_overlay_script].each do |field|
     validate_path!(root, profile[field], "profile #{id} #{field}")
   end
+
+  validate_x86_image_options!(root, id, profile)
 end
 
 profiles.each do |id, profile|

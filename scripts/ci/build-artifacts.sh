@@ -94,15 +94,35 @@ validate_firmware_artifacts() {
   local target_dir="$1"
   local config_file="$2"
 
+  require_artifact_pattern() {
+    local pattern="$1"
+    local description="$2"
+    local artifact
+
+    artifact="$(find "${target_dir}" -maxdepth 1 -type f -name "${pattern}" -print -quit)"
+    if [ -n "${artifact}" ]; then
+      return 0
+    fi
+
+    echo "ERROR: x86_64 build did not produce ${description}." >&2
+    echo "Expected files matching: ${pattern}" >&2
+    echo "Available files:" >&2
+    find "${target_dir}" -maxdepth 1 -type f -print | while IFS= read -r file; do
+      printf '  %s\n' "$(basename "${file}")"
+    done | sort >&2
+    exit 1
+  }
+
   if grep -q '^CONFIG_TARGET_x86_64=y$' "${config_file}"; then
-    if ! find "${target_dir}" -maxdepth 1 -type f -name "*-combined*.img.gz" | grep -q .; then
-      echo "ERROR: x86_64 build did not produce combined disk images." >&2
-      echo "Expected files matching: *-combined*.img.gz" >&2
-      echo "Available files:" >&2
-      find "${target_dir}" -maxdepth 1 -type f -print | while IFS= read -r file; do
-        printf '  %s\n' "$(basename "${file}")"
-      done | sort >&2
-      exit 1
+    require_artifact_pattern "*-combined.img.gz" "combined disk images"
+    if grep -q '^CONFIG_GRUB_EFI_IMAGES=y$' "${config_file}"; then
+      require_artifact_pattern "*-combined-efi.img.gz" "EFI combined disk images"
+    fi
+    if grep -q '^CONFIG_VMDK_IMAGES=y$' "${config_file}"; then
+      require_artifact_pattern "*-combined.vmdk" "VMDK disk images"
+      if grep -q '^CONFIG_GRUB_EFI_IMAGES=y$' "${config_file}"; then
+        require_artifact_pattern "*-combined-efi.vmdk" "EFI VMDK disk images"
+      fi
     fi
   fi
 }
@@ -142,7 +162,7 @@ generate_sha256_checksums() {
 
   cd "${firmware_path}"
   rm -f sha256sums.txt
-  for pattern in "*.img.gz" "*.bin" "*.tar.gz"; do
+  for pattern in "*.img.gz" "*.vmdk" "*.bin" "*.tar.gz"; do
     for file in ${pattern}; do
       [ -f "${file}" ] || continue
       case "${file}" in

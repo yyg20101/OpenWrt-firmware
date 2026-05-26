@@ -225,3 +225,4 @@ jobs:
           artifacts: ${{ steps.artifacts.outputs.firmware_path }}/*
           bodyFile: ${{ steps.release.outputs.release_body_file }}
           allowUpdates: false
+          makeLatest: true
