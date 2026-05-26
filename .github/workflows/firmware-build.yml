@@ -129,8 +129,11 @@ jobs:
         run: |
           set -euo pipefail
           if [ -d "$OPENWRT_PATH/staging_dir" ]; then
-            find "$OPENWRT_PATH/staging_dir" -type d -name stamp -not -path "*target*" -print0 \
-              | xargs -0 -r -I{} find "{}" -type f -exec touch {} +
+            if ! while IFS= read -r -d '' stamp_dir; do
+              find "$stamp_dir" -type f -exec touch {} +
+            done < <(find "$OPENWRT_PATH/staging_dir" -type d -name stamp -not -path "*target*" -print0); then
+              echo "WARNING: failed to warm cached stamps; continuing without stamp refresh." >&2
+            fi
             mkdir -p "$OPENWRT_PATH/tmp"
             echo "1" > "$OPENWRT_PATH/tmp/.build"
           fi
