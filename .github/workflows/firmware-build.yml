@@ -106,9 +106,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
-          key: ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}-${{ steps.source.outputs.wrt_hash }}
+          key: ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
           restore-keys: |
-            ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}-
+            ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
             ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
       - name: Restore Build Accelerator Cache
@@ -119,9 +119,9 @@ jobs:
             ${{ env.OPENWRT_DIR }}/staging_dir/host
             ${{ env.OPENWRT_DIR }}/staging_dir/hostpkg
             ${{ env.OPENWRT_DIR }}/staging_dir/toolchain-*
-          key: build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.profile.outputs.profile_hash }}-${{ steps.source.outputs.wrt_hash }}
+          key: build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
           restore-keys: |
-            build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.profile.outputs.profile_hash }}-
+            build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
             build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
       - name: Warm Cached Stamps
