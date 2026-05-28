@@ -18,6 +18,10 @@ permissions:
   contents: write
   actions: read
 
+concurrency:
+  group: firmware-build-${{ github.ref }}-${{ inputs.profile }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build ${{ inputs.profile }}
