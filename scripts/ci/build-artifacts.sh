@@ -34,6 +34,7 @@ compile_firmware() {
   [ "${jobs}" -ge 1 ] || jobs=1
 
   cd "${openwrt_path}"
+  ccache --max-size="${CCACHE_MAXSIZE:-900M}" || true
   ccache -s || true
   : > "${compile_log}"
 

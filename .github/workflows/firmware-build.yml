@@ -25,6 +25,10 @@ jobs:
     timeout-minutes: 360
     env:
       OPENWRT_DIR: openwrt
+      CCACHE_DIR: ${{ github.workspace }}/openwrt/.ccache
+      CCACHE_MAXSIZE: 900M
+      CCACHE_COMPRESS: "true"
+      CCACHE_COMPRESSLEVEL: "1"
     steps:
       - name: Maximize Build Space
         uses: easimon/maximize-build-space@v10
@@ -103,7 +107,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Restore ccache
-        uses: actions/cache@v5
+        id: cache-ccache
+        uses: actions/cache/restore@v5
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
           key: ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
@@ -113,7 +118,7 @@ jobs:
 
       - name: Restore Build Accelerator Cache
         id: cache-build-accel
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: |
             ${{ env.OPENWRT_DIR }}/staging_dir/host
@@ -124,8 +129,15 @@ jobs:
             build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
             build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
+      - name: Show Cache Status
+        run: |
+          set -euo pipefail
+          echo "ccache exact hit: ${{ steps.cache-ccache.outputs.cache-hit }}"
+          echo "ccache matched key: ${{ steps.cache-ccache.outputs.cache-matched-key }}"
+          echo "build accelerator exact hit: ${{ steps.cache-build-accel.outputs.cache-hit }}"
+          echo "build accelerator matched key: ${{ steps.cache-build-accel.outputs.cache-matched-key }}"
+
       - name: Warm Cached Stamps
-        if: steps.cache-build-accel.outputs.cache-hit == 'true'
         run: |
           set -euo pipefail
           if [ -d "$OPENWRT_PATH/staging_dir" ]; then
@@ -163,6 +175,23 @@ jobs:
         run: |
           set -euo pipefail
           bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" compile-firmware "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GITHUB_OUTPUT" "$GITHUB_ENV"
+
+      - name: Save ccache
+        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.OPENWRT_DIR }}/.ccache
+          key: ${{ steps.cache-ccache.outputs.cache-primary-key }}
+
+      - name: Save Build Accelerator Cache
+        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.OPENWRT_DIR }}/staging_dir/host
+            ${{ env.OPENWRT_DIR }}/staging_dir/hostpkg
+            ${{ env.OPENWRT_DIR }}/staging_dir/toolchain-*
+          key: ${{ steps.cache-build-accel.outputs.cache-primary-key }}
 
       - name: Upload Compile Log
         if: always()
