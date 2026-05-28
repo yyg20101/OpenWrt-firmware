@@ -12,12 +12,30 @@ append_line() {
 download_dependencies() {
   local openwrt_path="$1"
   local jobs="${2:-${MAKE_DOWNLOAD_JOBS:-8}}"
+  local retry_jobs=4
 
   cd "${openwrt_path}"
   make defconfig
-  make download -j"${jobs}"
-  find dl -size -1024c -exec ls -l {} \;
-  find dl -size -1024c -exec rm -f {} \;
+  if ! make download -j"${jobs}"; then
+    echo "WARNING: make download -j${jobs} failed; retrying with lower parallelism." >&2
+  fi
+
+  if find dl -size -1024c -print -quit | grep -q .; then
+    echo "WARNING: removing incomplete downloads before retry." >&2
+    find dl -size -1024c -exec ls -l {} \;
+    find dl -size -1024c -exec rm -f {} \;
+  fi
+
+  if ! make download -j"${retry_jobs}"; then
+    echo "WARNING: make download -j${retry_jobs} failed; retrying serial download." >&2
+    make download -j1
+  fi
+
+  if find dl -size -1024c -print -quit | grep -q .; then
+    echo "ERROR: incomplete downloads remain after retries:" >&2
+    find dl -size -1024c -exec ls -l {} \; >&2
+    exit 1
+  fi
 }
 
 compile_firmware() {

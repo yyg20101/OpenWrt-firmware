@@ -1,0 +1,102 @@
+name: Cache Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      older_than_days:
+        description: "Delete caches not accessed for at least this many days"
+        required: true
+        default: "7"
+        type: string
+      prefix:
+        description: "Only consider caches whose key starts with this prefix"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "List caches without deleting them"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Cleanup Actions Caches
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Cleanup Caches
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const olderThanDays = Number(core.getInput("older_than_days"));
+            const prefix = core.getInput("prefix");
+            const dryRun = core.getBooleanInput("dry_run");
+
+            if (!Number.isFinite(olderThanDays) || olderThanDays < 0) {
+              throw new Error(`older_than_days must be a non-negative number, got ${olderThanDays}`);
+            }
+
+            const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const candidates = [];
+
+            for await (const response of github.paginate.iterator(github.rest.actions.getActionsCacheList, {
+              owner,
+              repo,
+              per_page: 100,
+            })) {
+              for (const cache of response.data.actions_caches ?? []) {
+                if (prefix && !cache.key.startsWith(prefix)) continue;
+                const lastAccessed = new Date(cache.last_accessed_at).getTime();
+                if (lastAccessed > cutoff) continue;
+                candidates.push(cache);
+              }
+            }
+
+            candidates.sort((a, b) => new Date(a.last_accessed_at) - new Date(b.last_accessed_at));
+            core.summary.addHeading("Cache cleanup candidates");
+            core.summary.addRaw(`Dry run: ${dryRun}\n\n`);
+            core.summary.addRaw(`Prefix: ${prefix || "(any)"}\n\n`);
+            core.summary.addRaw(`Older than days: ${olderThanDays}\n\n`);
+
+            if (candidates.length === 0) {
+              core.summary.addRaw("No caches matched.\n");
+              await core.summary.write();
+              return;
+            }
+
+            core.summary.addTable([
+              [
+                { data: "ID", header: true },
+                { data: "Key", header: true },
+                { data: "Ref", header: true },
+                { data: "Size", header: true },
+                { data: "Last accessed", header: true },
+              ],
+              ...candidates.map((cache) => [
+                String(cache.id),
+                cache.key,
+                cache.ref,
+                `${(cache.size_in_bytes / 1024 / 1024).toFixed(2)} MiB`,
+                cache.last_accessed_at,
+              ]),
+            ]);
+
+            for (const cache of candidates) {
+              const message = `${dryRun ? "Would delete" : "Deleting"} cache ${cache.id}: ${cache.key}`;
+              core.info(message);
+              if (!dryRun) {
+                await github.rest.actions.deleteActionsCacheById({
+                  owner,
+                  repo,
+                  cache_id: cache.id,
+                });
+              }
+            }
+
+            await core.summary.write();

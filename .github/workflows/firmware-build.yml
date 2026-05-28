@@ -169,6 +169,16 @@ jobs:
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" run-general-script "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GENERAL_SCRIPT"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" apply-package-overrides "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$PACKAGE_BASE_SCRIPT" "$PACKAGE_OVERLAY_SCRIPT"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-custom-configuration "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$POST_FEEDS_SCRIPT"
+          bash "$GITHUB_WORKSPACE/scripts/ci/audit-config.sh" "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$PROFILE_ID"
+
+      - name: Upload Config Audit
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: config-audit-${{ inputs.profile }}-${{ github.run_id }}
+          path: ${{ github.workspace }}/config-audit/*
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Download Dependencies
         run: |

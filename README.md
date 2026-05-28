@@ -51,7 +51,15 @@ my_profile:
     - scripts/common/config/<platform>.config
 ```
 
-通用固件能力来自 `scripts/common/config/common.config`；平台、源码系或设备族差异通过 profile 的 `config_fragments` 追加。
+通用固件能力由多个 `scripts/common/config/*.config` 片段组合：
+
+- `base.config`：基础 LuCI 应用、核心工具、网络与隧道支持
+- `storage.config`：磁盘、文件系统、NVMe/SATA/NFS 支持
+- `usb-mobile.config`：USB 外设、USB 网卡、移动网络支持
+- `proxy.config`：DNS/代理相关共享包
+- `samba.config`：Samba4 文件共享栈，并显式禁用 autosamba
+
+平台、源码系、设备族和性能优化差异继续通过 profile 的 `config_fragments` 追加，例如 `x86.config`、`x86-performance.config`、`qualcommax-ipq60xx.config`、`lede-extra.config`。
 
 3. 运行本地校验：
 
