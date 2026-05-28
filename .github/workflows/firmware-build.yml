@@ -30,9 +30,11 @@ jobs:
     env:
       OPENWRT_DIR: openwrt
       CCACHE_DIR: ${{ github.workspace }}/openwrt/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}/openwrt
       CCACHE_MAXSIZE: 900M
       CCACHE_COMPRESS: "true"
       CCACHE_COMPRESSLEVEL: "1"
+      CCACHE_NOHASHDIR: "true"
     steps:
       - name: Maximize Build Space
         uses: easimon/maximize-build-space@v10
