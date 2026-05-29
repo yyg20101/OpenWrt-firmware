@@ -5,10 +5,19 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Profile id from devices/profiles.yml, or all"
+        description: "Profile or group to build"
         required: true
         default: "x86_64_immortalWrt"
-        type: string
+        type: choice
+        options:
+          - x86_64_immortalWrt
+          - x86_64_LEDE
+          - x86_64_all
+          - Qualcommax_LEDE
+          - Qualcommax_V
+          - Qualcommax_B
+          - qualcommax_all
+          - all
       release:
         description: "Publish successful builds to GitHub Releases"
         required: false

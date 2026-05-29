@@ -7,7 +7,7 @@
 - `Firmware CI`
   - 文件：`.github/workflows/firmware-ci.yml`
   - 手动触发参数：
-    - `target`: `devices/profiles.yml` 中的 profile id，或 `all`
+    - `target`: 下拉选择单个 profile、`x86_64_all`、`qualcommax_all` 或 `all`
     - `release`: 是否发布 GitHub Release
   - 事件触发：`repository_dispatch`，事件类型为 `firmware-ci`
 
@@ -66,6 +66,7 @@ my_profile:
 ```bash
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/profiles.sh matrix all "" "$PWD"
+bash scripts/ci/profiles.sh matrix x86_64_all "" "$PWD"
 ```
 
 ## Local Validation

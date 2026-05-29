@@ -63,6 +63,22 @@ def enabled?(profile)
   profile.fetch("enabled", true) != false
 end
 
+def selected_profile_ids(selector, profiles)
+  case selector
+  when "all"
+    profiles.select { |_id, profile| enabled?(profile) }.keys
+  when "x86_64_all"
+    profiles.select { |id, profile| enabled?(profile) && id.start_with?("x86_64_") }.keys
+  when "qualcommax_all"
+    profiles.select { |id, profile| enabled?(profile) && id.start_with?("Qualcommax_") }.keys
+  else
+    fail!("unknown profile or group: #{selector}") unless profiles.key?(selector)
+    fail!("profile is disabled: #{selector}") unless enabled?(profiles.fetch(selector))
+
+    [selector]
+  end
+end
+
 def validate_path!(root, value, field, required: false)
   if value.nil? || value.to_s.strip.empty?
     fail!("missing #{field}") if required
@@ -162,14 +178,7 @@ when "list"
   puts profiles.keys.join("\n")
 when "matrix"
   fail!("selector is required for matrix") if selector.to_s.strip.empty?
-
-  ids =
-    if selector == "all"
-      profiles.select { |_id, profile| enabled?(profile) }.keys
-    else
-      fail!("unknown profile: #{selector}") unless profiles.key?(selector)
-      [selector]
-    end
+  ids = selected_profile_ids(selector, profiles)
 
   fail!("no enabled profiles selected") if ids.empty?
 
