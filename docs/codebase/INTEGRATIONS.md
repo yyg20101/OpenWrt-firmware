@@ -33,6 +33,8 @@
 ### 4) Reliability and Failure Behavior
 
 - Compile retries: parallel `make`, serial `make`, then verbose serial `make V=s`.
+- Firmware configs enable BBR and optional SQM/CAKE/IFB support for better WAN throughput and latency stability.
+- x86 profiles include Intel/AMD microcode for CPU errata mitigation.
 - Release publishing is disabled by default and optional via `release=true`.
 - Multi-profile publishing does not update the GitHub Latest release marker.
 - Cache maintenance defaults to dry-run and refuses real deletion unless `prefix` or `ref` narrows the scope.

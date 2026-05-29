@@ -32,6 +32,7 @@
 | Concern | Evidence | Current symptom | Scaling risk | Suggested improvement |
 |---------|----------|-----------------|-------------|-----------------------|
 | OpenWrt builds are compute/disk intensive. | `.github/workflows/firmware-build.yml` | Workflow maximizes build space and restores caches. | More profiles increase runtime and cache churn. | Monitor cache hit rate and add profile grouping if needed. |
+| Network performance packages add footprint. | `scripts/common/config/network-performance.config` | BBR, SQM/CAKE, and IFB are enabled for all profiles. | Smaller flash targets may need a slimmer profile. | Keep the performance config as a separate fragment so low-storage devices can opt out. |
 | Network-heavy package/feed operations are serial. | `.github/workflows/firmware-build.yml`, `scripts/common/Packages.sh` | Feeds and package overlays run during every build. | Network stalls can dominate runtime. | Add targeted retry/timeout handling. |
 | Manual cache deletion can remove useful accelerators if scoped too broadly. | `.github/workflows/cache-maintenance.yml` | Real deletion now requires `prefix` or `ref` and keeps two newest matches by default. | Wrong filter choices can still delete useful cache groups. | Run dry-run first and keep cache keys grouped by source/profile family. |
 
@@ -42,6 +43,7 @@
 | `.github/workflows/firmware-build.yml` | Central build phase order, cache keys, artifact paths, and Release wiring live here. | Large workflow surface. | Keep step outputs explicit and run YAML/profile validation after edits. |
 | `scripts/ci/profiles.sh` | Profile validation, matrix output, env/output contracts, and cache hash computation live here. | New central contract. | Test with single profile and `all` matrix before workflow changes. |
 | `scripts/ci/config-feeds.sh` | Mutates the cloned OpenWrt tree. | Source/feeds layout can vary by upstream. | Keep path resolution explicit and fail on missing declared inputs. |
+| `devices/profiles.yml` source branches | External repos can rename or remove branches. | `Qualcommax_B` tracks `LiBwrt/openwrt-6.x` `main-nss`, the current default branch. | Verify source branches before changing profile sources. |
 
 ### 6) `[ASK USER]` Questions
 

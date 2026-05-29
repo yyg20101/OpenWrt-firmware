@@ -45,6 +45,8 @@ workflow_dispatch/repository_dispatch
 |---------|-------------|---------------|
 | Declarative registry | `devices/profiles.yml` | Adds devices without workflow edits. |
 | Generated manual targets | `profiles.sh target-options`, `sync-workflow-target-options.sh` | Keeps the GitHub manual dispatch dropdown aligned with enabled profiles and groups. |
+| Shared performance fragment | `network-performance.config` | Enables BBR and optional SQM/CAKE/IFB queue management consistently across profiles. |
+| Platform performance fragment | `x86-performance.config` | Keeps x86-only NIC, virtualization, IRQ balancing, and CPU microcode choices out of non-x86 profiles. |
 | Subcommand shell modules | `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`, `release-maintenance.sh` | Keeps workflow YAML thin and makes local validation possible. |
 | Env plus output contract | `profiles.sh`, `build-artifacts.sh`, `release-maintenance.sh` | Shell steps use environment variables while GitHub action `with:` expressions use step outputs. |
 | Compile fallback escalation | `build-artifacts.sh` | Tries parallel build, serial build, then verbose serial build for diagnostics. |

@@ -22,6 +22,7 @@ profiles:
     config: devices/x86_64_LEDE/.config
     config_fragments:
       - scripts/common/config/base.config
+      - scripts/common/config/network-performance.config
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
@@ -42,6 +43,7 @@ profiles:
     config: devices/x86_64_immortalWrt/.config
     config_fragments:
       - scripts/common/config/base.config
+      - scripts/common/config/network-performance.config
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
@@ -62,6 +64,7 @@ profiles:
     config: devices/Qualcommax_LEDE/.config
     config_fragments:
       - scripts/common/config/base.config
+      - scripts/common/config/network-performance.config
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
@@ -81,6 +84,7 @@ profiles:
     config: devices/Qualcommax_V/.config
     config_fragments:
       - scripts/common/config/base.config
+      - scripts/common/config/network-performance.config
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
@@ -91,7 +95,7 @@ profiles:
     title: Qualcommax B
     enabled: true
     source_repo: https://github.com/LiBwrt/openwrt-6.x
-    source_branch: kernel-6.12
+    source_branch: main-nss
     firmware_tag: qualcommax
     cache_group: qualcommax
     groups:
@@ -99,6 +103,7 @@ profiles:
     config: devices/Qualcommax_B/.config
     config_fragments:
       - scripts/common/config/base.config
+      - scripts/common/config/network-performance.config
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config

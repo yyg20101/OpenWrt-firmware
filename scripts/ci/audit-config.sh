@@ -76,6 +76,13 @@ if [ "$(config_value CONFIG_PACKAGE_wireguard-tools)" = "y" ] || [ "$(config_val
   require_value CONFIG_PACKAGE_kmod-wireguard y
 fi
 
+require_value CONFIG_PACKAGE_kmod-tcp-bbr y
+require_value CONFIG_PACKAGE_kmod-sched y
+require_value CONFIG_PACKAGE_kmod-sched-cake y
+require_value CONFIG_PACKAGE_kmod-ifb y
+require_value CONFIG_PACKAGE_sqm-scripts y
+require_value CONFIG_PACKAGE_luci-app-sqm y
+
 forbidden_enabled CONFIG_TARGET_MULTI_PROFILE
 forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
 
@@ -86,6 +93,9 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "autosamba: $(config_value CONFIG_PACKAGE_autosamba || true)"
   echo "WireGuard kmod: $(config_value CONFIG_PACKAGE_kmod-wireguard || true)"
   echo "irqbalance: $(config_value CONFIG_PACKAGE_irqbalance || true)"
+  echo "TCP BBR: $(config_value CONFIG_PACKAGE_kmod-tcp-bbr || true)"
+  echo "SQM scripts: $(config_value CONFIG_PACKAGE_sqm-scripts || true)"
+  echo "CAKE scheduler: $(config_value CONFIG_PACKAGE_kmod-sched-cake || true)"
 } > "${WORKSPACE}/config-audit/summary.txt"
 
 echo "Config audit passed for ${PROFILE_ID}."

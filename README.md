@@ -62,12 +62,13 @@ my_profile:
 通用固件能力由多个 `scripts/common/config/*.config` 片段组合：
 
 - `base.config`：基础 LuCI 应用、核心工具、网络与隧道支持
+- `network-performance.config`：BBR、SQM/CAKE、IFB 等网络吞吐和低延迟队列能力
 - `storage.config`：磁盘、文件系统、NVMe/SATA/NFS 支持
 - `usb-mobile.config`：USB 外设、USB 网卡、移动网络支持
 - `proxy.config`：DNS/代理相关共享包
 - `samba.config`：Samba4 文件共享栈，并显式禁用 autosamba
 
-平台、源码系、设备族和性能优化差异继续通过 profile 的 `config_fragments` 追加，例如 `x86.config`、`x86-performance.config`、`qualcommax-ipq60xx.config`、`lede-extra.config`。
+平台、源码系、设备族和性能优化差异继续通过 profile 的 `config_fragments` 追加，例如 `x86.config`、`x86-performance.config`、`qualcommax-ipq60xx.config`、`lede-extra.config`。x86 性能片段同时启用 Intel/AMD microcode，降低 CPU errata 和虚拟化/软路由场景下的稳定性风险。
 
 3. 运行本地校验：
 
