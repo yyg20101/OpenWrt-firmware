@@ -10,12 +10,12 @@ on:
         default: "x86_64_immortalWrt"
         type: choice
         options:
-          - x86_64_immortalWrt
           - x86_64_LEDE
-          - x86_64_all
+          - x86_64_immortalWrt
           - Qualcommax_LEDE
           - Qualcommax_V
           - Qualcommax_B
+          - x86_64_all
           - qualcommax_all
           - all
       release:
@@ -37,6 +37,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.resolve.outputs.matrix }}
+      make_latest: ${{ steps.resolve.outputs.make_latest }}
       release: ${{ steps.resolve.outputs.release }}
       target: ${{ steps.resolve.outputs.target }}
     steps:
@@ -62,6 +63,12 @@ jobs:
           esac
 
           matrix="$(bash scripts/ci/profiles.sh matrix "${target}" "" "${GITHUB_WORKSPACE}")"
+          selected_count="$(ruby -rjson -e 'payload = JSON.parse(STDIN.read); puts Array(payload.fetch("include")).length' <<< "${matrix}")"
+          if [ "${release}" = "true" ] && [ "${selected_count}" -eq 1 ]; then
+            make_latest="true"
+          else
+            make_latest="false"
+          fi
 
           append_output() {
             local key="$1"
@@ -76,6 +83,7 @@ jobs:
 
           append_output "target" "${target}"
           append_output "release" "${release}"
+          append_output "make_latest" "${make_latest}"
           append_output "matrix" "${matrix}"
 
   build:
@@ -87,5 +95,6 @@ jobs:
     uses: ./.github/workflows/firmware-build.yml
     with:
       profile: ${{ matrix.profile }}
+      make_latest: ${{ needs.resolve.outputs.make_latest == 'true' }}
       release: ${{ needs.resolve.outputs.release == 'true' }}
     secrets: inherit

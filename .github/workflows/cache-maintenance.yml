@@ -21,7 +21,7 @@ on:
       keep_latest:
         description: "Keep this many newest matched caches even if they are old"
         required: true
-        default: "0"
+        default: "2"
         type: string
       dry_run:
         description: "List caches without deleting them"
@@ -53,6 +53,9 @@ jobs:
             }
             if (!Number.isInteger(keepLatest) || keepLatest < 0) {
               throw new Error(`keep_latest must be a non-negative integer, got ${keepLatest}`);
+            }
+            if (!dryRun && !prefix && !ref) {
+              throw new Error("Refusing to delete caches without a prefix or ref filter. Set prefix or ref, or run with dry_run=true.");
             }
 
             const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;

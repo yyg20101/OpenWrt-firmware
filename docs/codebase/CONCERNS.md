@@ -7,7 +7,7 @@
 | Severity | Concern | Evidence | Impact | Suggested action |
 |----------|---------|----------|--------|------------------|
 | High | Builds depend on mutable external sources: upstream repos, feeds, package repos, remote build environment script, and runner images. | `.github/workflows/firmware-build.yml`, `devices/profiles.yml`, `scripts/common/Packages.sh` | Builds may fail or produce different artifacts without local changes. | Pin more external refs, record selected package refs, and add retry wrappers for network-heavy steps. |
-| Medium | `target=all` can trigger all enabled profiles in parallel. | `.github/workflows/firmware-ci.yml`, `devices/profiles.yml` | Actions minutes, cache quota, and release volume can spike. | Add concurrency limits or profile groups if quota pressure appears. |
+| Medium | `target=all` can trigger all enabled profiles in parallel. | `.github/workflows/firmware-ci.yml`, `devices/profiles.yml` | Actions minutes, cache quota, and release volume can spike. | Use profile groups for routine builds; multi-profile releases no longer overwrite GitHub Latest. |
 | Medium | No unit/fixture tests cover shell module behavior. | `.github/workflows/ci-lint.yml`, `scripts/ci/*.sh` | Syntax/schema checks can pass while behavioral edge cases remain. | Add fixture tests for profile export, config fragments, artifact organization, and Release metadata. |
 | Medium | Release tags are intentionally unique and not updated in place. | `.github/workflows/firmware-build.yml`, `scripts/ci/release-maintenance.sh` | Rebuilds create new releases rather than replacing old ones. | Define retention/cleanup policy in a future workflow. |
 
@@ -33,6 +33,7 @@
 |---------|----------|-----------------|-------------|-----------------------|
 | OpenWrt builds are compute/disk intensive. | `.github/workflows/firmware-build.yml` | Workflow maximizes build space and restores caches. | More profiles increase runtime and cache churn. | Monitor cache hit rate and add profile grouping if needed. |
 | Network-heavy package/feed operations are serial. | `.github/workflows/firmware-build.yml`, `scripts/common/Packages.sh` | Feeds and package overlays run during every build. | Network stalls can dominate runtime. | Add targeted retry/timeout handling. |
+| Manual cache deletion can remove useful accelerators if scoped too broadly. | `.github/workflows/cache-maintenance.yml` | Real deletion now requires `prefix` or `ref` and keeps two newest matches by default. | Wrong filter choices can still delete useful cache groups. | Run dry-run first and keep cache keys grouped by source/profile family. |
 
 ### 5) Fragile/High-Churn Areas
 

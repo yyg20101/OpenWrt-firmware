@@ -7,15 +7,26 @@ bash "${ROOT_DIR}/scripts/ci/profiles.sh" validate "" "" "${ROOT_DIR}"
 ROOT_DIR="${ROOT_DIR}" ruby <<'RUBY'
 require "yaml"
 require "pathname"
+require "open3"
 
 root = Pathname.new(ENV.fetch("ROOT_DIR")).expand_path
-profiles_path = root.join("devices/profiles.yml")
 workflow_path = root.join(".github/workflows/firmware-ci.yml")
 
-profiles = YAML.load_file(profiles_path.to_s).fetch("profiles", {})
-enabled_profile_ids = profiles.select { |_id, profile| profile.fetch("enabled", true) != false }.keys
-group_options = profiles.values.flat_map { |profile| Array(profile["groups"]) }.uniq.sort
-expected_options = enabled_profile_ids + group_options + ["all"]
+stdout, stderr, status = Open3.capture3(
+  "bash",
+  root.join("scripts/ci/profiles.sh").to_s,
+  "target-options",
+  "",
+  "",
+  root.to_s
+)
+unless status.success?
+  warn stderr
+  warn "ERROR: failed to generate expected firmware-ci target options"
+  exit status.exitstatus || 1
+end
+
+expected_options = stdout.lines.map(&:strip).reject(&:empty?)
 
 workflow = YAML.load_file(workflow_path.to_s) || {}
 triggers = workflow["on"] || workflow[true] || {}

@@ -9,7 +9,7 @@ OUTPUT_OUT="${5:-${GITHUB_OUTPUT:-}}"
 CONFIG_PATH="${PROFILES_FILE:-devices/profiles.yml}"
 
 if [ -z "${COMMAND}" ]; then
-  echo "Usage: $0 <validate|list|matrix|export-env> [selector] [env-out] [root-dir]" >&2
+  echo "Usage: $0 <validate|list|target-options|matrix|export-env> [selector] [env-out] [root-dir]" >&2
   exit 1
 fi
 
@@ -191,6 +191,11 @@ when "validate"
   puts "Validated #{profiles.length} firmware profiles from #{config_path.relative_path_from(root)}"
 when "list"
   puts profiles.keys.join("\n")
+when "target-options"
+  enabled_profile_ids = profiles.select { |_id, profile| enabled?(profile) }.keys
+  enabled_profiles = profiles.select { |_id, profile| enabled?(profile) }.values
+  group_options = enabled_profiles.flat_map { |profile| profile_groups(profile, "enabled profile groups") }.uniq
+  puts((enabled_profile_ids + group_options + ["all"]).join("\n"))
 when "matrix"
   fail!("selector is required for matrix") if selector.to_s.strip.empty?
   ids = selected_profile_ids(selector, profiles)

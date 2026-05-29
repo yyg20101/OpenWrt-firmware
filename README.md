@@ -10,10 +10,16 @@
     - `target`: 下拉选择单个 profile、`x86_64_all`、`qualcommax_all` 或 `all`
     - `release`: 是否发布 GitHub Release，默认不发布
   - 事件触发：`repository_dispatch`，事件类型为 `firmware-ci`
+  - 只有单 profile 发布会标记为 GitHub Latest；分组或 `all` 发布不会覆盖 Latest 标记。
 
 - `Firmware Build`
   - 文件：`.github/workflows/firmware-build.yml`
   - 可复用构建实现，负责环境初始化、源码克隆、缓存、配置、feeds、编译、产物整理、默认访问检测、Artifact 和 Release。
+
+- `Cache Maintenance`
+  - 文件：`.github/workflows/cache-maintenance.yml`
+  - 手动清理 GitHub Actions Cache，默认 dry-run 并保留匹配范围内最新 2 个缓存。
+  - 真实删除时必须指定 `prefix` 或 `ref`，避免误删全部缓存。
 
 - `CI Lint`
   - 文件：`.github/workflows/ci-lint.yml`
@@ -66,7 +72,9 @@ my_profile:
 3. 运行本地校验：
 
 ```bash
+bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
+bash scripts/ci/profiles.sh target-options "" "" "$PWD"
 bash scripts/ci/profiles.sh matrix all "" "$PWD"
 bash scripts/ci/profiles.sh matrix x86_64_all "" "$PWD"
 ```
@@ -78,6 +86,7 @@ bash scripts/ci/profiles.sh matrix x86_64_all "" "$PWD"
 ```bash
 ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"
 find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
+bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 ```
@@ -101,6 +110,8 @@ Release tag 格式：
 ```text
 firmware-<profile>-<source>-<branch>-<commit>-run<run-number>
 ```
+
+单 profile 发布会被标记为 GitHub Latest；分组或 `all` 发布会创建独立 Release，但不会让最后完成的 profile 抢占 Latest。
 
 ## Documentation
 

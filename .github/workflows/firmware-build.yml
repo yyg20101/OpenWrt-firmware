@@ -13,6 +13,11 @@ on:
         required: false
         default: false
         type: boolean
+      make_latest:
+        description: "Mark the published release as the latest release"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -278,4 +283,4 @@ jobs:
           artifacts: ${{ steps.artifacts.outputs.firmware_path }}/*
           bodyFile: ${{ steps.release.outputs.release_body_file }}
           allowUpdates: false
-          makeLatest: true
+          makeLatest: ${{ inputs.make_latest }}

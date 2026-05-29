@@ -16,7 +16,8 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Manual entry through `workflow_dispatch`.
   - Optional automation entry through `repository_dispatch` with event type `firmware-ci`.
   - Resolves `target` into a build matrix by calling `scripts/ci/profiles.sh matrix`.
-  - Accepts `target=<profile-id>` or `target=all`.
+  - Accepts `target=<profile-id>`, profile groups, or `target=all`.
+  - Marks published releases as GitHub Latest only when one profile is selected.
 
 - `.github/workflows/firmware-build.yml`
   - Reusable build implementation.
@@ -27,6 +28,11 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Validates shell syntax.
   - Validates `devices/profiles.yml`.
   - Validates Dependabot ecosystem coverage.
+
+- `.github/workflows/cache-maintenance.yml`
+  - Manually lists or deletes GitHub Actions caches.
+  - Defaults to dry-run and keeps the newest two matched caches.
+  - Requires `prefix` or `ref` for real deletions.
 
 ## Profile Contract
 
@@ -57,12 +63,15 @@ Shared defaults may define:
 
 `scripts/ci/profiles.sh export-env` writes profile values to both `GITHUB_ENV` and `GITHUB_OUTPUT`, so shell steps and action expressions use the same resolved contract.
 
+`scripts/ci/profiles.sh target-options` generates the supported manual dispatch targets from enabled profiles, their groups, and `all`. `scripts/ci/sync-workflow-target-options.sh` writes those targets into `.github/workflows/firmware-ci.yml`, keeping the GitHub manual dispatch dropdown aligned with `devices/profiles.yml`.
+
 ## Build Flow
 
 ```text
 Firmware CI
   -> Resolve target from workflow_dispatch/repository_dispatch
   -> Generate matrix from devices/profiles.yml
+  -> Decide whether a single published profile may become GitHub Latest
   -> Firmware Build(profile)
     -> Load profile
     -> Initialize runner
@@ -86,6 +95,7 @@ Firmware CI
 - `scripts/ci/profiles.sh`
   - Validates profile schema.
   - Lists profile ids.
+  - Generates manual dispatch target options.
   - Generates build matrix JSON.
   - Exports one profile as environment variables and step outputs.
 
@@ -113,6 +123,9 @@ Firmware CI
 - `scripts/ci/validate-profiles.sh`
   - CI-facing profile validation wrapper.
 
+- `scripts/ci/sync-workflow-target-options.sh`
+  - Updates the static GitHub Actions manual dispatch dropdown from `devices/profiles.yml`.
+
 - `scripts/ci/validate-dependabot-coverage.sh`
   - Detects npm/pip/docker manifests and requires matching Dependabot ecosystems.
 
@@ -120,13 +133,16 @@ Firmware CI
 
 - Add device metadata only in `devices/profiles.yml`.
 - Add device OpenWrt config under `devices/<profile-id>/.config`.
+- Run `scripts/ci/sync-workflow-target-options.sh` after changing enabled profiles or groups.
 - Keep long shell logic in `scripts/ci/*.sh`, not workflow YAML.
 - Preserve profile output names when refactoring cache, artifact, or Release behavior.
+- Keep cache deletion workflows filtered by `prefix` or `ref`; dry-run is the only broad mode.
 - Run local validation before pushing:
 
 ```bash
 ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"
 find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
+bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 ```
