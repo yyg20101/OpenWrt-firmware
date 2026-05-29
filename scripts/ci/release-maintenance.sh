@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-append_env_line() {
+append_github_value() {
   local target="$1"
-  local line="$2"
+  local key="$2"
+  local value="$3"
+  local delimiter
+
   if [ -n "${target}" ]; then
-    echo "${line}" >> "${target}"
+    delimiter="EOF_${key}_${RANDOM}_$(date +%s%N)"
+    {
+      printf '%s<<%s\n' "${key}" "${delimiter}"
+      printf '%s\n' "${value}"
+      printf '%s\n' "${delimiter}"
+    } >> "${target}"
   fi
 }
 
@@ -108,12 +116,12 @@ $(cat "${package_table}")
 </details>
 EOF
 
-  append_env_line "${env_target}" "RELEASE_NAME=${release_name}"
-  append_env_line "${env_target}" "RELEASE_TAG=${release_tag}"
-  append_env_line "${env_target}" "RELEASE_BODY_FILE=${body_file}"
-  append_env_line "${output_target}" "release_name=${release_name}"
-  append_env_line "${output_target}" "release_tag=${release_tag}"
-  append_env_line "${output_target}" "release_body_file=${body_file}"
+  append_github_value "${env_target}" "RELEASE_NAME" "${release_name}"
+  append_github_value "${env_target}" "RELEASE_TAG" "${release_tag}"
+  append_github_value "${env_target}" "RELEASE_BODY_FILE" "${body_file}"
+  append_github_value "${output_target}" "release_name" "${release_name}"
+  append_github_value "${output_target}" "release_tag" "${release_tag}"
+  append_github_value "${output_target}" "release_body_file" "${body_file}"
 }
 
 generate_package_table() {

@@ -11,6 +11,22 @@ fi
 
 cd "${OPENWRT_PATH_ARG}"
 
+append_github_value() {
+  local target="$1"
+  local key="$2"
+  local value="$3"
+  local delimiter
+
+  if [ -n "${target}" ]; then
+    delimiter="EOF_${key}_${RANDOM}_$(date +%s%N)"
+    {
+      printf '%s<<%s\n' "${key}" "${delimiter}"
+      printf '%s\n' "${value}"
+      printf '%s\n' "${delimiter}"
+    } >> "${target}"
+  fi
+}
+
 find_rootfs_file() {
   local rel_path="$1"
   find build_dir -type f -path "*/root-*/${rel_path}" 2>/dev/null | head -n1 || true
@@ -165,12 +181,10 @@ DEFAULT_PASSWORD="${pw_info[0]:-unknown (not detected from source/rootfs)}"
 DEFAULT_PASSWORD_SOURCE="${pw_info[1]:-n/a}"
 
 if [ -n "${ENV_OUT}" ]; then
-  {
-    echo "DEFAULT_IP=$DEFAULT_IP"
-    echo "DEFAULT_IP_SOURCE=$DEFAULT_IP_SOURCE"
-    echo "DEFAULT_PASSWORD=$DEFAULT_PASSWORD"
-    echo "DEFAULT_PASSWORD_SOURCE=$DEFAULT_PASSWORD_SOURCE"
-  } >> "${ENV_OUT}"
+  append_github_value "${ENV_OUT}" "DEFAULT_IP" "${DEFAULT_IP}"
+  append_github_value "${ENV_OUT}" "DEFAULT_IP_SOURCE" "${DEFAULT_IP_SOURCE}"
+  append_github_value "${ENV_OUT}" "DEFAULT_PASSWORD" "${DEFAULT_PASSWORD}"
+  append_github_value "${ENV_OUT}" "DEFAULT_PASSWORD_SOURCE" "${DEFAULT_PASSWORD_SOURCE}"
 fi
 
 echo "Detected default IP: $DEFAULT_IP (source: $DEFAULT_IP_SOURCE)"

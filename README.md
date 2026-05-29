@@ -8,7 +8,7 @@
   - 文件：`.github/workflows/firmware-ci.yml`
   - 手动触发参数：
     - `target`: 下拉选择单个 profile、`x86_64_all`、`qualcommax_all` 或 `all`
-    - `release`: 是否发布 GitHub Release
+    - `release`: 是否发布 GitHub Release，默认不发布
   - 事件触发：`repository_dispatch`，事件类型为 `firmware-ci`
 
 - `Firmware Build`
@@ -46,6 +46,8 @@ my_profile:
   source_branch: main
   firmware_tag: my-platform
   cache_group: my-cache-group
+  groups:
+    - my_group
   config: devices/my_profile/.config
   config_fragments:
     - scripts/common/config/<platform>.config

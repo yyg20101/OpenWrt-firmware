@@ -13,6 +13,16 @@ on:
         required: false
         default: ""
         type: string
+      ref:
+        description: "Only consider caches for this ref, for example refs/heads/main"
+        required: false
+        default: ""
+        type: string
+      keep_latest:
+        description: "Keep this many newest matched caches even if they are old"
+        required: true
+        default: "0"
+        type: string
       dry_run:
         description: "List caches without deleting them"
         required: true
@@ -34,16 +44,21 @@ jobs:
           script: |
             const olderThanDays = Number(core.getInput("older_than_days"));
             const prefix = core.getInput("prefix");
+            const ref = core.getInput("ref");
+            const keepLatest = Number(core.getInput("keep_latest"));
             const dryRun = core.getBooleanInput("dry_run");
 
             if (!Number.isFinite(olderThanDays) || olderThanDays < 0) {
               throw new Error(`older_than_days must be a non-negative number, got ${olderThanDays}`);
             }
+            if (!Number.isInteger(keepLatest) || keepLatest < 0) {
+              throw new Error(`keep_latest must be a non-negative integer, got ${keepLatest}`);
+            }
 
             const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const candidates = [];
+            const matched = [];
 
             for await (const response of github.paginate.iterator(github.rest.actions.getActionsCacheList, {
               owner,
@@ -52,17 +67,29 @@ jobs:
             })) {
               for (const cache of response.data.actions_caches ?? []) {
                 if (prefix && !cache.key.startsWith(prefix)) continue;
-                const lastAccessed = new Date(cache.last_accessed_at).getTime();
-                if (lastAccessed > cutoff) continue;
-                candidates.push(cache);
+                if (ref && cache.ref !== ref) continue;
+                matched.push(cache);
               }
+            }
+
+            matched.sort((a, b) => new Date(b.last_accessed_at) - new Date(a.last_accessed_at));
+            const protectedCaches = new Set(matched.slice(0, keepLatest).map((cache) => cache.id));
+            const candidates = [];
+            for (const cache of matched) {
+              if (protectedCaches.has(cache.id)) continue;
+              const lastAccessed = new Date(cache.last_accessed_at).getTime();
+              if (lastAccessed > cutoff) continue;
+              candidates.push(cache);
             }
 
             candidates.sort((a, b) => new Date(a.last_accessed_at) - new Date(b.last_accessed_at));
             core.summary.addHeading("Cache cleanup candidates");
             core.summary.addRaw(`Dry run: ${dryRun}\n\n`);
             core.summary.addRaw(`Prefix: ${prefix || "(any)"}\n\n`);
+            core.summary.addRaw(`Ref: ${ref || "(any)"}\n\n`);
             core.summary.addRaw(`Older than days: ${olderThanDays}\n\n`);
+            core.summary.addRaw(`Keep latest: ${keepLatest}\n\n`);
+            core.summary.addRaw(`Matched caches before retention: ${matched.length}\n\n`);
 
             if (candidates.length === 0) {
               core.summary.addRaw("No caches matched.\n");

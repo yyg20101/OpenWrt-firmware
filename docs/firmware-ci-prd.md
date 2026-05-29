@@ -30,7 +30,7 @@
   - `firmware-ci.yml` accepts `target=<profile-id>` or `target=all` and delegates each matrix item to `firmware-build.yml`.
   - `firmware-build.yml` does not hard-code device ids.
   - Cache keys include source slug, branch, cache group, profile hash, and source commit hash.
-  - Release publishing can be disabled per dispatch with `release=false`.
+  - Release publishing is disabled by default and can be enabled per dispatch with `release=true`.
 
 - **Non-Goals**:
   - No web UI for device management.

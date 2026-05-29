@@ -18,10 +18,22 @@ require "yaml"
 require "json"
 require "pathname"
 require "digest"
+require "securerandom"
 
 def fail!(message)
   warn "ERROR: #{message}"
   exit 1
+end
+
+def append_github_value(target, key, value)
+  return if target.to_s.strip.empty?
+
+  delimiter = "EOF_#{key}_#{SecureRandom.hex(8)}"
+  File.open(target, "a") do |file|
+    file.puts("#{key}<<#{delimiter}")
+    file.puts(value.to_s)
+    file.puts(delimiter)
+  end
 end
 
 root = Pathname.new(ENV.fetch("ROOT_DIR")).expand_path
@@ -63,20 +75,22 @@ def enabled?(profile)
   profile.fetch("enabled", true) != false
 end
 
-def selected_profile_ids(selector, profiles)
-  case selector
-  when "all"
-    profiles.select { |_id, profile| enabled?(profile) }.keys
-  when "x86_64_all"
-    profiles.select { |id, profile| enabled?(profile) && id.start_with?("x86_64_") }.keys
-  when "qualcommax_all"
-    profiles.select { |id, profile| enabled?(profile) && id.start_with?("Qualcommax_") }.keys
-  else
-    fail!("unknown profile or group: #{selector}") unless profiles.key?(selector)
-    fail!("profile is disabled: #{selector}") unless enabled?(profiles.fetch(selector))
+def profile_groups(profile, field)
+  array_value(profile["groups"], field)
+end
 
-    [selector]
-  end
+def selected_profile_ids(selector, profiles)
+  return profiles.select { |_id, profile| enabled?(profile) }.keys if selector == "all"
+
+  group_ids = profiles.select do |id, profile|
+    enabled?(profile) && profile_groups(profile, "profile #{id} groups").include?(selector)
+  end.keys
+  return group_ids if group_ids.any?
+
+  fail!("unknown profile or group: #{selector}") unless profiles.key?(selector)
+
+  fail!("profile is disabled: #{selector}") unless enabled?(profiles.fetch(selector))
+  [selector]
 end
 
 def validate_path!(root, value, field, required: false)
@@ -147,6 +161,7 @@ def validate_profile!(root, id, raw_profile, defaults)
   %w[source_repo source_branch firmware_tag config cache_group].each do |field|
     fail!("profile #{id} missing #{field}") if profile[field].nil? || profile[field].to_s.strip.empty?
   end
+  profile_groups(profile, "profile #{id} groups")
 
   unless profile["source_repo"].to_s.match?(%r{\Ahttps://github\.com/[^/]+/[^/]+(\.git)?\z})
     fail!("profile #{id} source_repo must be a GitHub HTTPS repository URL")
@@ -243,18 +258,12 @@ when "export-env"
     "TZ" => profile.fetch("timezone", "Asia/Shanghai")
   }
 
-  File.open(env_out, "a") do |file|
-    values.each do |key, value|
-      file.puts("#{key}=#{value}")
-    end
+  values.each do |key, value|
+    append_github_value(env_out, key, value)
   end
 
-  unless output_out.to_s.strip.empty?
-    File.open(output_out, "a") do |file|
-      values.each do |key, value|
-        file.puts("#{key.downcase}=#{value}")
-      end
-    end
+  values.each do |key, value|
+    append_github_value(output_out, key.downcase, value)
   end
 
   puts "Loaded profile #{selector}: #{values["PROFILE_TITLE"]}"

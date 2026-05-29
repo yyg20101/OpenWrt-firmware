@@ -17,6 +17,8 @@ profiles:
     source_branch: master
     firmware_tag: X86-64
     cache_group: x86_64
+    groups:
+      - x86_64_all
     config: devices/x86_64_LEDE/.config
     config_fragments:
       - scripts/common/config/base.config
@@ -35,6 +37,8 @@ profiles:
     source_branch: master
     firmware_tag: X86-64
     cache_group: x86_64
+    groups:
+      - x86_64_all
     config: devices/x86_64_immortalWrt/.config
     config_fragments:
       - scripts/common/config/base.config
@@ -53,6 +57,8 @@ profiles:
     source_branch: master
     firmware_tag: qualcommax
     cache_group: qualcommax
+    groups:
+      - qualcommax_all
     config: devices/Qualcommax_LEDE/.config
     config_fragments:
       - scripts/common/config/base.config
@@ -70,6 +76,8 @@ profiles:
     source_branch: main
     firmware_tag: qualcommax
     cache_group: qualcommax
+    groups:
+      - qualcommax_all
     config: devices/Qualcommax_V/.config
     config_fragments:
       - scripts/common/config/base.config
@@ -86,6 +94,8 @@ profiles:
     source_branch: kernel-6.12
     firmware_tag: qualcommax
     cache_group: qualcommax
+    groups:
+      - qualcommax_all
     config: devices/Qualcommax_B/.config
     config_fragments:
       - scripts/common/config/base.config

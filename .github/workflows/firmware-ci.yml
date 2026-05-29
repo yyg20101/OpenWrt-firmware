@@ -21,7 +21,7 @@ on:
       release:
         description: "Publish successful builds to GitHub Releases"
         required: false
-        default: true
+        default: false
         type: boolean
   repository_dispatch:
     types:
@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
 
           target="${INPUT_TARGET:-${PAYLOAD_TARGET:-x86_64_immortalWrt}}"
-          release_raw="${INPUT_RELEASE:-${PAYLOAD_RELEASE:-true}}"
+          release_raw="${INPUT_RELEASE:-${PAYLOAD_RELEASE:-false}}"
 
           case "${release_raw}" in
             true|TRUE|True|1|yes|YES|Yes) release="true" ;;
@@ -63,11 +63,20 @@ jobs:
 
           matrix="$(bash scripts/ci/profiles.sh matrix "${target}" "" "${GITHUB_WORKSPACE}")"
 
-          {
-            echo "target=${target}"
-            echo "release=${release}"
-            echo "matrix=${matrix}"
-          } >> "${GITHUB_OUTPUT}"
+          append_output() {
+            local key="$1"
+            local value="$2"
+            local delimiter="EOF_${key}_${RANDOM}_$(date +%s%N)"
+            {
+              printf '%s<<%s\n' "${key}" "${delimiter}"
+              printf '%s\n' "${value}"
+              printf '%s\n' "${delimiter}"
+            } >> "${GITHUB_OUTPUT}"
+          }
+
+          append_output "target" "${target}"
+          append_output "release" "${release}"
+          append_output "matrix" "${matrix}"
 
   build:
     name: Build ${{ matrix.profile }}

@@ -33,7 +33,7 @@
 ### 4) Reliability and Failure Behavior
 
 - Compile retries: parallel `make`, serial `make`, then verbose serial `make V=s`.
-- Release publishing is optional via `release=false`.
+- Release publishing is disabled by default and optional via `release=true`.
 - The update-checker and cleanup workflows were removed from the default architecture to reduce hidden side effects.
 - No general retry/backoff wrapper exists for network-heavy source/feed/package operations.
 

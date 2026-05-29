@@ -14,7 +14,8 @@ workflow_path = root.join(".github/workflows/firmware-ci.yml")
 
 profiles = YAML.load_file(profiles_path.to_s).fetch("profiles", {})
 enabled_profile_ids = profiles.select { |_id, profile| profile.fetch("enabled", true) != false }.keys
-expected_options = enabled_profile_ids + %w[x86_64_all qualcommax_all all]
+group_options = profiles.values.flat_map { |profile| Array(profile["groups"]) }.uniq.sort
+expected_options = enabled_profile_ids + group_options + ["all"]
 
 workflow = YAML.load_file(workflow_path.to_s) || {}
 triggers = workflow["on"] || workflow[true] || {}

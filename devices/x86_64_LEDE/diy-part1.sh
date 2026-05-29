@@ -1,1 +1,0 @@
-../../common/scripts/diy-part1-helloworld.sh

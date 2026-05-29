@@ -40,6 +40,7 @@ Required fields per profile:
 - `source_branch`
 - `firmware_tag`
 - `cache_group`
+- `groups`
 - `config`
 
 Shared defaults may define:
