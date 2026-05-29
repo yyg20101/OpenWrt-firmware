@@ -10,7 +10,7 @@
 | `.github/dependabot.yml` | Dependabot configuration for GitHub Actions dependency updates. | `.github/dependabot.yml` |
 | `devices/` | Declarative profile registry plus per-profile OpenWrt `.config` files. | `devices/profiles.yml`, `devices/*/.config` |
 | `scripts/ci/` | Reusable CI implementation modules for profile parsing, config/feeds, build artifacts, access detection, release metadata, and validation. | `scripts/ci/profiles.sh`, `scripts/ci/config-feeds.sh`, `scripts/ci/build-artifacts.sh` |
-| `scripts/common/` | Shared config fragments, build customizations, and package overlay helpers. | `scripts/common/config/common.config`, `scripts/common/General.sh`, `scripts/common/Packages.sh`, `scripts/common/package` |
+| `scripts/common/` | Shared config fragments, build customizations, and package overlay helpers. | `scripts/common/config/base.config`, `scripts/common/General.sh`, `scripts/common/Packages.sh`, `scripts/common/package` |
 | `docs/` | PRD, architecture notes, and generated codebase knowledge. | `docs/firmware-ci-prd.md`, `docs/ci-workflow-architecture.md`, `docs/codebase/` |
 | `README.md` | User-facing workflow, profile, validation, and Release contract overview. | `README.md` |
 

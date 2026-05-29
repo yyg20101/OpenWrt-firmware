@@ -10,7 +10,6 @@ on:
   push:
     branches:
       - main
-      - codex/main-workflow-opt
     paths:
       - ".github/workflows/**"
       - "scripts/**"

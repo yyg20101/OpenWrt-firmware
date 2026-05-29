@@ -6,7 +6,7 @@
 
 | Item | Rule | Example | Evidence |
 |------|------|---------|----------|
-| Files | CI shell modules use kebab-case; workflows use firmware-domain names; shared assets keep existing OpenWrt-oriented names. | `build-artifacts.sh`, `firmware-build.yml`, `Driver.config` | `scripts/ci/`, `.github/workflows/`, `scripts/common/` |
+| Files | CI shell modules use kebab-case; workflows use firmware-domain names; shared assets keep existing OpenWrt-oriented names. | `build-artifacts.sh`, `firmware-build.yml`, `base.config` | `scripts/ci/`, `.github/workflows/`, `scripts/common/` |
 | Functions/methods | Bash functions use lower_snake_case; package helper functions use UPPER_SNAKE names. | `prepare_feeds`, `generate_sha256_checksums`, `UPDATE_PACKAGE` | `scripts/ci/config-feeds.sh`, `scripts/ci/build-artifacts.sh`, `scripts/common/Packages.sh` |
 | Types/interfaces | Not applicable; repository uses Bash/YAML/config files and no typed interfaces. | `[TODO]` no type declarations found | `scripts/ci/*.sh`, `.github/workflows/*.yml` |
 | Constants/env vars | Workflow/script environment variables use UPPER_SNAKE_CASE; profile YAML uses lower_snake_case keys. | `PROFILE_ID`, `SOURCE_SLUG`, `source_repo`, `cache_group` | `scripts/ci/profiles.sh`, `devices/profiles.yml` |

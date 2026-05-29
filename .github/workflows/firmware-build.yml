@@ -120,7 +120,6 @@ jobs:
           key: ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
           restore-keys: |
             ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
-            ccache-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
       - name: Restore Build Accelerator Cache
         id: cache-build-accel
@@ -133,7 +132,6 @@ jobs:
           key: build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
           restore-keys: |
             build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
-            build-accel-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
       - name: Show Cache Status
         run: |
