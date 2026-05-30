@@ -165,6 +165,31 @@ def validate_x86_image_options!(root, id, profile)
   end
 end
 
+def validate_luci_web_options!(root, id, profile)
+  lines = merged_config_lines(root, profile, id)
+  has_luci = %w[
+    CONFIG_PACKAGE_luci
+    CONFIG_PACKAGE_luci-base
+  ].any? { |option| config_assignment(lines, option) == "y" }
+  return unless has_luci
+
+  required = {
+    "CONFIG_PACKAGE_luci" => "y",
+    "CONFIG_PACKAGE_luci-base" => "y",
+    "CONFIG_PACKAGE_rpcd" => "y",
+    "CONFIG_PACKAGE_rpcd-mod-luci" => "y",
+    "CONFIG_PACKAGE_uhttpd" => "y",
+    "CONFIG_PACKAGE_uhttpd-mod-ubus" => "y"
+  }
+
+  required.each do |option, expected|
+    actual = config_assignment(lines, option)
+    next if actual == expected
+
+    fail!("profile #{id} enables LuCI but lacks #{option}=#{expected}, got #{actual || "unset"}")
+  end
+end
+
 def validate_profile!(root, id, raw_profile, defaults)
   fail!("profile #{id} must be a map") unless raw_profile.is_a?(Hash)
 
@@ -188,6 +213,7 @@ def validate_profile!(root, id, raw_profile, defaults)
   end
 
   validate_x86_image_options!(root, id, profile)
+  validate_luci_web_options!(root, id, profile)
 end
 
 profiles.each do |id, profile|

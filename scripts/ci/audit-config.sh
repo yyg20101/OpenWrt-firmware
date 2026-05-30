@@ -85,6 +85,12 @@ require_value CONFIG_PACKAGE_kmod-sched-cake y
 require_value CONFIG_PACKAGE_kmod-ifb y
 require_value CONFIG_PACKAGE_sqm-scripts y
 require_value CONFIG_PACKAGE_luci-app-sqm y
+require_value CONFIG_PACKAGE_luci y
+require_value CONFIG_PACKAGE_luci-base y
+require_value CONFIG_PACKAGE_rpcd y
+require_value CONFIG_PACKAGE_rpcd-mod-luci y
+require_value CONFIG_PACKAGE_uhttpd y
+require_value CONFIG_PACKAGE_uhttpd-mod-ubus y
 
 forbidden_enabled CONFIG_TARGET_MULTI_PROFILE
 forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
@@ -99,6 +105,10 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "TCP BBR: $(config_value CONFIG_PACKAGE_kmod-tcp-bbr || true)"
   echo "SQM scripts: $(config_value CONFIG_PACKAGE_sqm-scripts || true)"
   echo "CAKE scheduler: $(config_value CONFIG_PACKAGE_kmod-sched-cake || true)"
+  echo "LuCI meta: $(config_value CONFIG_PACKAGE_luci || true)"
+  echo "uHTTPd: $(config_value CONFIG_PACKAGE_uhttpd || true)"
+  echo "uHTTPd ubus: $(config_value CONFIG_PACKAGE_uhttpd-mod-ubus || true)"
+  echo "rpcd luci: $(config_value CONFIG_PACKAGE_rpcd-mod-luci || true)"
 } > "${WORKSPACE}/config-audit/summary.txt"
 
 echo "Config audit passed for ${PROFILE_ID}."
