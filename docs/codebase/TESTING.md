@@ -16,6 +16,8 @@ bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/validate-cache-maintenance.sh
 bash scripts/ci/validate-release-maintenance.sh
 bash scripts/ci/test-artifacts-release.sh
+bash scripts/ci/test-config-audit.sh
+bash scripts/ci/test-config-feeds.sh
 bash scripts/ci/profiles.sh matrix all "" "$PWD"
 ```
 
@@ -54,5 +56,7 @@ bash scripts/ci/profiles.sh matrix all "" "$PWD"
 - `scripts/ci/validate-cache-maintenance.sh`
 - `scripts/ci/validate-release-maintenance.sh`
 - `scripts/ci/test-artifacts-release.sh`
+- `scripts/ci/test-config-audit.sh`
+- `scripts/ci/test-config-feeds.sh`
 - `scripts/ci/profiles.sh`
 - `docs/firmware-ci-prd.md`

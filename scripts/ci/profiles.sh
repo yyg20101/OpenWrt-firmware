@@ -269,6 +269,7 @@ when "export-env"
       profile["package_overlay_script"],
       profile["feeds_conf"]
     ]),
+    *Dir[root.join("files/**/*").to_s].select { |path| File.file?(path) }.map { |path| Pathname.new(path) },
     config_path
   ].uniq
   profile_hash = Digest::SHA256.hexdigest(hash_inputs.map { |path| Digest::SHA256.file(path.to_s).hexdigest }.join(":"))[0, 16]

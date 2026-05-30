@@ -157,7 +157,10 @@ load_custom_configuration() {
   local workspace="$2"
   local post_feeds_script="$3"
 
-  [ -e "${workspace}/files" ] && mv "${workspace}/files" "${openwrt_path}/files"
+  if [ -d "${workspace}/files" ]; then
+    rm -rf "${openwrt_path}/files"
+    cp -a "${workspace}/files" "${openwrt_path}/files"
+  fi
   if [ -f "${workspace}/effective.config" ]; then
     cp "${workspace}/effective.config" "${openwrt_path}/.config"
   fi
