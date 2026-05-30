@@ -167,27 +167,21 @@ end
 
 def validate_luci_web_options!(root, id, profile)
   lines = merged_config_lines(root, profile, id)
-  has_luci = %w[
-    CONFIG_PACKAGE_luci
-    CONFIG_PACKAGE_luci-base
-  ].any? { |option| config_assignment(lines, option) == "y" }
+  has_luci = lines.any? do |line|
+    stripped = line.strip
+    stripped.start_with?("CONFIG_PACKAGE_luci") && stripped.end_with?("=y")
+  end
   return unless has_luci
 
   required = {
-    "CONFIG_PACKAGE_luci" => "y",
-    "CONFIG_PACKAGE_luci-base" => "y",
-    "CONFIG_PACKAGE_luci-theme-bootstrap" => "y",
-    "CONFIG_PACKAGE_rpcd" => "y",
-    "CONFIG_PACKAGE_rpcd-mod-luci" => "y",
-    "CONFIG_PACKAGE_uhttpd" => "y",
-    "CONFIG_PACKAGE_uhttpd-mod-ubus" => "y"
+    "CONFIG_PACKAGE_luci" => "y"
   }
 
   required.each do |option, expected|
     actual = config_assignment(lines, option)
     next if actual == expected
 
-    fail!("profile #{id} enables LuCI but lacks #{option}=#{expected}, got #{actual || "unset"}")
+    fail!("profile #{id} enables LuCI components but lacks #{option}=#{expected}, got #{actual || "unset"}")
   end
 end
 
