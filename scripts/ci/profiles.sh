@@ -176,6 +176,7 @@ def validate_luci_web_options!(root, id, profile)
   required = {
     "CONFIG_PACKAGE_luci" => "y",
     "CONFIG_PACKAGE_luci-base" => "y",
+    "CONFIG_PACKAGE_luci-theme-bootstrap" => "y",
     "CONFIG_PACKAGE_rpcd" => "y",
     "CONFIG_PACKAGE_rpcd-mod-luci" => "y",
     "CONFIG_PACKAGE_uhttpd" => "y",
