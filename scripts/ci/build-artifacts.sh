@@ -137,13 +137,30 @@ validate_firmware_artifacts() {
     if grep -q '^CONFIG_GRUB_EFI_IMAGES=y$' "${config_file}"; then
       require_artifact_pattern "*-combined-efi.img.gz" "EFI combined disk images"
     fi
-    if grep -q '^CONFIG_VMDK_IMAGES=y$' "${config_file}"; then
-      require_artifact_pattern "*-combined.vmdk" "VMDK disk images"
-      if grep -q '^CONFIG_GRUB_EFI_IMAGES=y$' "${config_file}"; then
-        require_artifact_pattern "*-combined-efi.vmdk" "EFI VMDK disk images"
-      fi
-    fi
   fi
+}
+
+prune_virtual_machine_images() {
+  local target_dir="$1"
+
+  find "${target_dir}" -maxdepth 1 -type f \
+    \( -name "*.vmdk" -o -name "*.vdi" -o -name "*.vhd" -o -name "*.vhdx" -o -name "*.qcow2" \) \
+    -print | sort | while IFS= read -r file; do
+      echo "Prune VM image artifact: $(basename "${file}")"
+      rm -f "${file}"
+    done
+
+  return 0
+}
+
+write_artifact_manifest() {
+  local firmware_path="$1"
+
+  cd "${firmware_path}"
+  find . -maxdepth 1 -type f ! -name artifact-manifest.txt ! -name artifact-manifest.tmp -print | while IFS= read -r file; do
+    basename "${file}"
+  done | sort > artifact-manifest.tmp
+  mv artifact-manifest.tmp artifact-manifest.txt
 }
 
 organize_firmware_files() {
@@ -159,6 +176,7 @@ organize_firmware_files() {
   fi
 
   validate_firmware_artifacts "${target_dir}" "${openwrt_path}/.config"
+  prune_virtual_machine_images "${target_dir}"
 
   cd "${target_dir}"
   mkdir -p packages
@@ -167,10 +185,10 @@ organize_firmware_files() {
   fi
   tar -zcf Packages.tar.gz packages
   cp "${openwrt_path}/.config" build.config
-  find . -maxdepth 1 -type f ! -name artifact-manifest.txt ! -name artifact-manifest.tmp -print | while IFS= read -r file; do
-    basename "${file}"
-  done | sort > artifact-manifest.tmp
-  mv artifact-manifest.tmp artifact-manifest.txt
+  if [ -f "${openwrt_path}/package-source-manifest.tsv" ]; then
+    cp "${openwrt_path}/package-source-manifest.tsv" package-source-manifest.tsv
+  fi
+  write_artifact_manifest "${PWD}"
   rm -rf packages
   append_line "${env_target}" "FIRMWARE_PATH=${PWD}"
   append_line "${output_target}" "firmware_path=${PWD}"
@@ -181,7 +199,7 @@ generate_sha256_checksums() {
 
   cd "${firmware_path}"
   rm -f sha256sums.txt
-  for pattern in "*.img.gz" "*.vmdk" "*.bin" "*.tar.gz"; do
+  for pattern in "*.img.gz" "*.bin" "*.tar.gz"; do
     for file in ${pattern}; do
       [ -f "${file}" ] || continue
       case "${file}" in
@@ -191,6 +209,7 @@ generate_sha256_checksums() {
     done
   done
   [ -s sha256sums.txt ] || echo "No firmware files matched checksum patterns."
+  write_artifact_manifest "${firmware_path}"
 }
 
 SUBCOMMAND="${1:-}"

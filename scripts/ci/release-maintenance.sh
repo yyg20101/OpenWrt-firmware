@@ -48,6 +48,7 @@ prepare_release_metadata() {
   local artifact_table="${workspace}/release-artifacts.md"
   local package_table="${workspace}/release-packages.md"
   local package_count_file="${workspace}/release-package-count.txt"
+  local package_source_table="${workspace}/release-package-sources.md"
   local package_count="0"
 
   if [ -z "${firmware_path}" ] || [ ! -d "${firmware_path}" ]; then
@@ -75,6 +76,7 @@ prepare_release_metadata() {
 
   generate_package_table "${firmware_path}" "${package_table}" "${package_count_file}"
   package_count="$(cat "${package_count_file}")"
+  generate_package_source_table "${firmware_path}" "${package_source_table}"
 
   cat > "${body_file}" <<EOF
 ## Firmware Build
@@ -114,6 +116,10 @@ Packages.tar.gz contains ${package_count} package file(s).
 $(cat "${package_table}")
 
 </details>
+
+## Package Sources
+
+$(cat "${package_source_table}")
 EOF
 
   append_github_value "${env_target}" "RELEASE_NAME" "${release_name}"
@@ -122,6 +128,35 @@ EOF
   append_github_value "${output_target}" "release_name" "${release_name}"
   append_github_value "${output_target}" "release_tag" "${release_tag}"
   append_github_value "${output_target}" "release_body_file" "${body_file}"
+}
+
+generate_package_source_table() {
+  local firmware_path="$1"
+  local table_file="$2"
+  local manifest="${firmware_path}/package-source-manifest.tsv"
+
+  if [ ! -f "${manifest}" ]; then
+    echo "_No package source manifest found._" > "${table_file}"
+    return
+  fi
+
+  {
+    echo "| Package | Repository | Ref | Commit | Mode |"
+    echo "|---------|------------|-----|--------|------|"
+    awk -F '\t' '
+    function md_cell(value) {
+      gsub(/\\/, "\\\\", value)
+      gsub(/\|/, "\\|", value)
+      return value
+    }
+    NR > 1 {
+      commit = $4
+      if (length(commit) > 12) {
+        commit = substr(commit, 1, 12)
+      }
+      printf("| `%s` | `%s` | `%s` | `%s` | `%s` |\n", md_cell($1), md_cell($2), md_cell($3), md_cell(commit), md_cell($5))
+    }' "${manifest}"
+  } > "${table_file}"
 }
 
 generate_package_table() {

@@ -34,6 +34,11 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Defaults to dry-run and keeps the newest two matched caches.
   - Requires `prefix` or `ref` for real deletions.
 
+- `.github/workflows/release-maintenance.yml`
+  - Manually lists or deletes old GitHub Releases by tag prefix.
+  - Defaults to dry-run and keeps the newest matched releases.
+  - Allows broad `firmware-` dry-runs, but requires a profile-specific tag prefix for real deletions.
+
 ## Profile Contract
 
 The authoritative device registry is `devices/profiles.yml`.
@@ -74,14 +79,14 @@ Firmware CI
   -> Decide whether a single published profile may become GitHub Latest
   -> Firmware Build(profile)
     -> Load profile
-    -> Initialize runner
-    -> Clone OpenWrt source
+    -> Initialize runner with retry/backoff for network package setup
+    -> Clone OpenWrt source with retry/backoff
     -> Restore ccache and build accelerator cache
     -> Load .config and config fragments
     -> Prepare feeds and run pre-feeds script
-    -> Update/install feeds
+    -> Update/install feeds with retry/backoff
     -> Run general script
-    -> Apply package overlays
+    -> Apply package overlays and record package source refs
     -> Run post-feeds script
     -> Download dependencies
     -> Compile with fallback
@@ -106,19 +111,25 @@ Firmware CI
   - Loads base config.
   - Appends declared config fragments.
   - Runs feeds and customization hooks.
+  - Retries feeds update/install operations with backoff.
   - Applies package overlays.
+
+- `scripts/ci/retry.sh`
+  - Provides shared retry/backoff behavior for network-heavy workflow and CI script steps.
 
 - `scripts/ci/build-artifacts.sh`
   - Downloads dependencies.
   - Compiles with fallback strategies.
   - Dumps failure context.
   - Organizes firmware files and checksums.
+  - Prunes VM-specific disk image formats (`*.vmdk`, `*.vdi`, `*.vhd`, `*.vhdx`, `*.qcow2`) from uploaded artifacts while keeping `Packages.tar.gz`.
 
 - `scripts/ci/detect-default-access.sh`
   - Detects default LAN IP and root password state from source/rootfs outputs.
 
 - `scripts/ci/release-maintenance.sh`
   - Generates standardized Release name, tag, body file, and action outputs.
+  - Adds package archive and package source manifest details to the Release body when present.
 
 - `scripts/ci/validate-profiles.sh`
   - CI-facing profile validation wrapper.

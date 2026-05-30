@@ -63,9 +63,12 @@ if [ "$(config_value CONFIG_TARGET_x86_64)" = "y" ]; then
   require_value CONFIG_TARGET_ROOTFS_EXT4FS y
   require_value CONFIG_GRUB_IMAGES y
   require_value CONFIG_GRUB_EFI_IMAGES y
-  require_value CONFIG_VMDK_IMAGES y
   require_value CONFIG_PACKAGE_irqbalance y
   require_value CONFIG_PACKAGE_kmod-nft-offload y
+  forbidden_enabled CONFIG_VMDK_IMAGES
+  forbidden_enabled CONFIG_VDI_IMAGES
+  forbidden_enabled CONFIG_VHDX_IMAGES
+  forbidden_enabled CONFIG_QCOW2_IMAGES
 fi
 
 if [ "$(config_value CONFIG_PACKAGE_luci-app-samba4)" = "y" ]; then

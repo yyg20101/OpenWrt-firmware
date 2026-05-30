@@ -52,3 +52,18 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/ci/validate-dependabot-coverage.sh
+
+      - name: Validate Cache Maintenance / 校验缓存清理保护
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-cache-maintenance.sh
+
+      - name: Validate Release Maintenance / 校验发布清理保护
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-release-maintenance.sh
+
+      - name: Validate Artifact Release Fixture / 校验产物与发布元数据
+        run: |
+          set -euo pipefail
+          bash scripts/ci/test-artifacts-release.sh

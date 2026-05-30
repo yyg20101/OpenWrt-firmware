@@ -62,10 +62,12 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           set -euo pipefail
+          source "$GITHUB_WORKSPACE/scripts/ci/retry.sh"
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android "$AGENT_TOOLSDIRECTORY" || true
-          sudo -E apt-get -qq update
-          sudo bash -c 'bash <(curl -fsSL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          sudo -E apt-get -qq install \
+          run_with_retries "apt-get update" sudo -E apt-get -qq update
+          run_with_retries "download build environment script" curl -fsSL https://build-scripts.immortalwrt.org/init_build_environment.sh -o /tmp/init_build_environment.sh
+          run_with_retries "run build environment script" sudo bash /tmp/init_build_environment.sh
+          run_with_retries "apt-get install build dependencies" sudo -E apt-get -qq install \
             ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache \
             clang cmake cpio curl device-tree-compiler file flex gawk gcc-multilib g++-multilib gettext \
             genisoimage git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev \
@@ -93,7 +95,8 @@ jobs:
         id: source
         run: |
           set -euo pipefail
-          git clone --single-branch --depth=1 "$REPO_URL" -b "$REPO_BRANCH" "$OPENWRT_DIR"
+          source "$GITHUB_WORKSPACE/scripts/ci/retry.sh"
+          run_with_retries "clone OpenWrt source" git clone --single-branch --depth=1 "$REPO_URL" -b "$REPO_BRANCH" "$OPENWRT_DIR"
           cd "$OPENWRT_DIR"
           wrt_hash="$(git rev-parse --short HEAD)"
           source_commit="$(git rev-parse HEAD)"
@@ -173,9 +176,7 @@ jobs:
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" append-config-fragments "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$CONFIG_FRAGMENTS"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" snapshot-effective-config "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" prepare-feeds "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$FEEDS_CONF" "$PRE_FEEDS_SCRIPT"
-          cd "$OPENWRT_PATH"
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" update-install-feeds "$OPENWRT_PATH"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" run-general-script "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GENERAL_SCRIPT"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" apply-package-overrides "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$PACKAGE_BASE_SCRIPT" "$PACKAGE_OVERLAY_SCRIPT"
           bash "$GITHUB_WORKSPACE/scripts/ci/config-feeds.sh" load-custom-configuration "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$POST_FEEDS_SCRIPT"

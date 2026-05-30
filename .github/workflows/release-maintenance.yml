@@ -1,0 +1,138 @@
+name: Release Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      older_than_days:
+        description: "Delete releases published at least this many days ago"
+        required: true
+        default: "14"
+        type: string
+      tag_prefix:
+        description: "Only consider releases whose tag starts with this prefix"
+        required: true
+        default: "firmware-"
+        type: string
+      keep_latest:
+        description: "Keep this many newest matched releases even if they are old"
+        required: true
+        default: "2"
+        type: string
+      dry_run:
+        description: "List releases without deleting them"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: Cleanup GitHub Releases
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Cleanup Releases
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const olderThanDays = Number(core.getInput("older_than_days"));
+            const tagPrefix = core.getInput("tag_prefix");
+            const keepLatest = Number(core.getInput("keep_latest"));
+            const dryRun = core.getBooleanInput("dry_run");
+
+            if (!Number.isFinite(olderThanDays) || olderThanDays < 0) {
+              throw new Error(`older_than_days must be a non-negative number, got ${olderThanDays}`);
+            }
+            if (!Number.isInteger(keepLatest) || keepLatest < 0) {
+              throw new Error(`keep_latest must be a non-negative integer, got ${keepLatest}`);
+            }
+            if (!tagPrefix) {
+              throw new Error("tag_prefix is required.");
+            }
+            const profilePrefixPattern = /^firmware-[A-Za-z0-9_]+-/;
+            if (!dryRun && !profilePrefixPattern.test(tagPrefix)) {
+              throw new Error("Refusing to delete releases without a profile-specific firmware tag prefix, for example firmware-x86_64_LEDE-.");
+            }
+
+            const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const matched = [];
+
+            for await (const response of github.paginate.iterator(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            })) {
+              for (const release of response.data ?? []) {
+                if (!release.tag_name.startsWith(tagPrefix)) continue;
+                if (release.draft) continue;
+                if (release.immutable) continue;
+                matched.push(release);
+              }
+            }
+
+            matched.sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at));
+            const protectedReleases = new Set(matched.slice(0, keepLatest).map((release) => release.id));
+            const candidates = [];
+
+            for (const release of matched) {
+              if (protectedReleases.has(release.id)) continue;
+              const publishedAt = new Date(release.published_at || release.created_at).getTime();
+              if (publishedAt > cutoff) continue;
+              candidates.push(release);
+            }
+
+            candidates.sort((a, b) => new Date(a.published_at || a.created_at) - new Date(b.published_at || b.created_at));
+
+            core.summary.addHeading("Release cleanup candidates");
+            core.summary.addRaw(`Dry run: ${dryRun}\n\n`);
+            core.summary.addRaw(`Tag prefix: ${tagPrefix}\n\n`);
+            core.summary.addRaw(`Older than days: ${olderThanDays}\n\n`);
+            core.summary.addRaw(`Keep latest: ${keepLatest}\n\n`);
+            core.summary.addRaw(`Matched releases before retention: ${matched.length}\n\n`);
+
+            if (candidates.length === 0) {
+              core.summary.addRaw("No releases matched.\n");
+              await core.summary.write();
+              return;
+            }
+
+            core.summary.addTable([
+              [
+                { data: "ID", header: true },
+                { data: "Tag", header: true },
+                { data: "Name", header: true },
+                { data: "Published", header: true },
+              ],
+              ...candidates.map((release) => [
+                String(release.id),
+                release.tag_name,
+                release.name || "",
+                release.published_at || release.created_at || "",
+              ]),
+            ]);
+
+            for (const release of candidates) {
+              const message = `${dryRun ? "Would delete" : "Deleting"} release ${release.id}: ${release.tag_name}`;
+              core.info(message);
+              if (!dryRun) {
+                await github.rest.repos.deleteRelease({
+                  owner,
+                  repo,
+                  release_id: release.id,
+                });
+                try {
+                  await github.rest.git.deleteRef({
+                    owner,
+                    repo,
+                    ref: `tags/${release.tag_name}`,
+                  });
+                } catch (error) {
+                  core.warning(`Failed to delete tag ${release.tag_name}: ${error.message}`);
+                }
+              }
+            }
+
+            await core.summary.write();

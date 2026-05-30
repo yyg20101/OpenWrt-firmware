@@ -41,7 +41,7 @@ bash scripts/ci/validate-dependabot-coverage.sh
 
 - No unit test framework is configured.
 - CI validation covers YAML syntax, shell syntax, profile schema, and Dependabot coverage.
-- `[TODO]` Fixture tests for shell subcommands are listed as v1.1 in the PRD.
+- Fixture tests now cover artifact pruning, Release body generation, and Release Maintenance guardrails; broader shell subcommand fixtures remain a future hardening area.
 
 ### 6) Evidence
 

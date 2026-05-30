@@ -8,8 +8,9 @@
   - Adding a new enabled device requires one `devices/<profile-id>/.config` file and one `devices/profiles.yml` entry, with no workflow YAML edits.
   - `target=all` expands to every enabled profile in `devices/profiles.yml`.
   - Local validation commands pass for workflow YAML, shell syntax, profile schema, and Dependabot coverage.
-  - Every successful build uploads a firmware artifact with `build.config`, `artifact-manifest.txt`, `Packages.tar.gz`, and `sha256sums.txt` when matching firmware files exist.
-  - Every published Release includes profile, source, commit, profile hash, workflow run, default access, and artifact file table.
+  - Every successful build uploads a firmware artifact with `build.config`, `artifact-manifest.txt`, `Packages.tar.gz`, optional package source manifest, and `sha256sums.txt` when matching firmware files exist.
+  - VM-specific disk image formats are excluded from published artifacts; compressed raw disk images are retained for x86.
+  - Every published Release includes profile, source, commit, profile hash, workflow run, default access, package source details, and artifact file table.
 
 ### 2. User Experience & Functionality
 
@@ -58,6 +59,7 @@
   - GitHub Artifacts for compile logs and firmware outputs.
   - GitHub Releases for optional published firmware.
   - External OpenWrt source repositories and feeds.
+  - GitHub package overlays are retried and recorded with their resolved ref/commit when package customization runs.
 
 - **Security & Privacy**:
   - Workflow permissions are limited to `contents: write` and `actions: read` for build/release operations.
@@ -69,8 +71,8 @@
 
 - **Phased Rollout**:
   - MVP: Declarative profiles, dynamic matrix, reusable build workflow, profile validation, standardized Release metadata.
-  - v1.1: Add fixture tests for `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`, and `release-maintenance.sh`.
-  - v2.0: Optional scheduled update checks, retention policy automation, package ref pinning, and per-profile build concurrency controls.
+  - v1.1: Add fixture tests for `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`, and `release-maintenance.sh`; artifact/Release fixtures are partially implemented.
+  - v2.0: Optional scheduled update checks, package ref pinning, and per-profile build concurrency controls.
 
 - **Technical Risks**:
   - GitHub runner image changes can break OpenWrt build prerequisites.

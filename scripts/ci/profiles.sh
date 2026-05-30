@@ -142,8 +142,7 @@ def validate_x86_image_options!(root, id, profile)
     "CONFIG_TARGET_ROOTFS_PARTSIZE" => "1024",
     "CONFIG_TARGET_ROOTFS_EXT4FS" => "y",
     "CONFIG_GRUB_IMAGES" => "y",
-    "CONFIG_GRUB_EFI_IMAGES" => "y",
-    "CONFIG_VMDK_IMAGES" => "y"
+    "CONFIG_GRUB_EFI_IMAGES" => "y"
   }
 
   required.each do |option, expected|
@@ -151,6 +150,18 @@ def validate_x86_image_options!(root, id, profile)
     next if actual == expected
 
     fail!("profile #{id} requires #{option}=#{expected} for x86 image output, got #{actual || "unset"}")
+  end
+
+  %w[
+    CONFIG_VMDK_IMAGES
+    CONFIG_VDI_IMAGES
+    CONFIG_VHDX_IMAGES
+    CONFIG_QCOW2_IMAGES
+  ].each do |option|
+    actual = config_assignment(lines, option)
+    next if actual.nil? || actual == "n"
+
+    fail!("profile #{id} should not enable #{option}; VM-specific disk images are pruned from CI artifacts")
   end
 end
 

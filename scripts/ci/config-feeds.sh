@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+source "${SCRIPT_DIR}/retry.sh"
+
 resolve_path() {
   local workspace="$1"
   local path="$2"
@@ -82,6 +85,14 @@ prepare_feeds() {
     fi
   fi
   echo "Pre-feeds script missing, skip."
+}
+
+update_and_install_feeds() {
+  local openwrt_path="$1"
+
+  cd "${openwrt_path}"
+  run_with_retries "feeds update" ./scripts/feeds update -a
+  run_with_retries "feeds install" ./scripts/feeds install -a
 }
 
 run_general_script() {
@@ -178,6 +189,9 @@ case "${SUBCOMMAND}" in
   prepare-feeds)
     prepare_feeds "${2:-}" "${3:-}" "${4:-}" "${5:-}"
     ;;
+  update-install-feeds)
+    update_and_install_feeds "${2:-}"
+    ;;
   run-general-script)
     run_general_script "${2:-}" "${3:-}" "${4:-}"
     ;;
@@ -189,7 +203,7 @@ case "${SUBCOMMAND}" in
     ;;
   *)
     echo "Usage: $0 <subcommand> [args...]" >&2
-    echo "Subcommands: load-base-config, append-config-fragments, snapshot-effective-config, prepare-feeds, run-general-script, apply-package-overrides, load-custom-configuration" >&2
+    echo "Subcommands: load-base-config, append-config-fragments, snapshot-effective-config, prepare-feeds, update-install-feeds, run-general-script, apply-package-overrides, load-custom-configuration" >&2
     exit 1
     ;;
 esac

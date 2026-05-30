@@ -13,6 +13,9 @@ ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_fil
 find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-dependabot-coverage.sh
+bash scripts/ci/validate-cache-maintenance.sh
+bash scripts/ci/validate-release-maintenance.sh
+bash scripts/ci/test-artifacts-release.sh
 bash scripts/ci/profiles.sh matrix all "" "$PWD"
 ```
 
@@ -27,7 +30,7 @@ bash scripts/ci/profiles.sh matrix all "" "$PWD"
 | Scope | Covered? | Typical target | Notes |
 |-------|----------|----------------|-------|
 | Unit | No | `[TODO]` | No unit framework or test files are present. |
-| Integration | Partial | Workflow/script/profile contracts | CI lint validates YAML, shell syntax, profile schema, matrix generation, and Dependabot coverage. |
+| Integration | Partial | Workflow/script/profile contracts | CI lint validates YAML, shell syntax, profile schema, matrix generation, Dependabot coverage, and artifact/Release fixture behavior. |
 | E2E | Manual/CI workflow | Full firmware build | `Firmware CI` performs real source clone, feeds update, compile, artifacts, and optional Release. |
 
 ### 4) Mocking and Isolation Strategy
@@ -40,7 +43,7 @@ bash scripts/ci/profiles.sh matrix all "" "$PWD"
 
 - Coverage tool + threshold: none configured.
 - Current reported coverage: `[TODO]` not applicable.
-- Known gaps: no fixture tests exercise shell subcommands or Release body generation.
+- Known gaps: no fixture tests exercise every shell subcommand; artifact pruning, Release body generation, Cache Maintenance guardrails, and Release Maintenance guardrails now have focused checks.
 
 ### 6) Evidence
 
@@ -48,5 +51,8 @@ bash scripts/ci/profiles.sh matrix all "" "$PWD"
 - `.github/workflows/firmware-ci.yml`
 - `.github/workflows/firmware-build.yml`
 - `scripts/ci/validate-profiles.sh`
+- `scripts/ci/validate-cache-maintenance.sh`
+- `scripts/ci/validate-release-maintenance.sh`
+- `scripts/ci/test-artifacts-release.sh`
 - `scripts/ci/profiles.sh`
 - `docs/firmware-ci-prd.md`
