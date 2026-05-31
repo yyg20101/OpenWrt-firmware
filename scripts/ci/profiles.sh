@@ -206,6 +206,9 @@ def validate_profile!(root, id, raw_profile, defaults)
   %w[feeds_conf pre_feeds_script post_feeds_script general_script package_base_script package_overlay_script].each do |field|
     validate_path!(root, profile[field], "profile #{id} #{field}")
   end
+  if profile.key?("make_compile_jobs") && !profile["make_compile_jobs"].to_s.match?(/\A[1-9][0-9]*\z/)
+    fail!("profile #{id} make_compile_jobs must be a positive integer")
+  end
 
   validate_x86_image_options!(root, id, profile)
   validate_luci_web_options!(root, id, profile)
@@ -292,6 +295,7 @@ when "export-env"
     "PACKAGE_BASE_SCRIPT" => profile["package_base_script"].to_s,
     "PACKAGE_OVERLAY_SCRIPT" => profile["package_overlay_script"].to_s,
     "MAKE_DOWNLOAD_JOBS" => profile.fetch("make_download_jobs", 8).to_s,
+    "MAKE_COMPILE_JOBS" => profile["make_compile_jobs"].to_s,
     "PROFILE_HASH" => profile_hash,
     "TZ" => profile.fetch("timezone", "Asia/Shanghai")
   }

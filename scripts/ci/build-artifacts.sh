@@ -46,15 +46,20 @@ compile_firmware() {
   local compile_log="${workspace}/compile.log"
   local build_exit=0
   local jobs=1
+  local max_jobs="${MAKE_COMPILE_JOBS:-}"
 
   jobs="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
   [[ "${jobs}" =~ ^[0-9]+$ ]] || jobs=1
   [ "${jobs}" -ge 1 ] || jobs=1
+  if [[ "${max_jobs}" =~ ^[0-9]+$ ]] && [ "${max_jobs}" -ge 1 ] && [ "${max_jobs}" -lt "${jobs}" ]; then
+    jobs="${max_jobs}"
+  fi
 
   cd "${openwrt_path}"
   ccache --max-size="${CCACHE_MAXSIZE:-900M}" || true
   ccache -s || true
   : > "${compile_log}"
+  echo "Compile jobs: ${jobs} (runner cores: $(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown), limit: ${max_jobs:-auto})" | tee -a "${compile_log}"
 
   set +e
   make -j"${jobs}" 2>&1 | tee -a "${compile_log}"

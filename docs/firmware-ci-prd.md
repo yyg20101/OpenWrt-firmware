@@ -30,6 +30,7 @@
   - `bash scripts/ci/profiles.sh matrix all "" "$PWD"` emits JSON with all enabled profiles.
   - `firmware-ci.yml` accepts `target=<profile-id>` or `target=all` and delegates each matrix item to `firmware-build.yml`.
   - `firmware-build.yml` does not hard-code device ids.
+  - Profiles can cap compile parallelism with `make_compile_jobs` when a source tree is memory-sensitive on GitHub-hosted runners.
   - Cache keys include source slug, branch, cache group, and the current cache week; `PROFILE_HASH` is retained for Release metadata and health reports.
   - `optimization-health.yml` can be manually run to generate read-only profile, matrix, and cache health reports.
   - Release publishing is disabled by default and can be enabled per dispatch with `release=true`.

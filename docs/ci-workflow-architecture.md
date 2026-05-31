@@ -72,6 +72,11 @@ Shared defaults may define:
 - `package_base_script`
 - `package_overlay_script`
 - `make_download_jobs`
+- `make_compile_jobs`
+
+Profiles may also set `make_compile_jobs` directly to cap OpenWrt compile
+parallelism for source trees that are memory-sensitive on GitHub-hosted
+runners. When omitted, the build uses the runner CPU count.
 
 `scripts/ci/profiles.sh export-env` writes profile values to both `GITHUB_ENV` and `GITHUB_OUTPUT`, so shell steps and action expressions use the same resolved contract.
 
