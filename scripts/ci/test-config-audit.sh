@@ -12,6 +12,8 @@ trap cleanup EXIT
 OPENWRT_DIR="${TMP_DIR}/openwrt"
 WORK_DIR="${TMP_DIR}/workspace"
 mkdir -p "${OPENWRT_DIR}" "${WORK_DIR}"
+mkdir -p "${WORK_DIR}/files/etc/uci-defaults"
+touch "${WORK_DIR}/files/etc/uci-defaults/99-performance-defaults"
 
 cat > "${OPENWRT_DIR}/Makefile" <<'EOF'
 .PHONY: defconfig
@@ -103,10 +105,27 @@ expect_fail_without_theme() {
   fi
 }
 
+expect_fail_without_performance_overlay() {
+  write_config "${OPENWRT_DIR}/.config"
+  rm -f "${WORK_DIR}/files/etc/uci-defaults/99-performance-defaults"
+  if bash "${ROOT_DIR}/scripts/ci/audit-config.sh" "${OPENWRT_DIR}" "${WORK_DIR}" "fixture-performance-overlay" >"${TMP_DIR}/audit.log" 2>&1; then
+    echo "ERROR: audit passed without runtime performance defaults overlay" >&2
+    exit 1
+  fi
+  if ! grep -q "requires runtime performance defaults overlay" "${TMP_DIR}/audit.log"; then
+    echo "ERROR: expected missing-performance-overlay audit failure" >&2
+    cat "${TMP_DIR}/audit.log" >&2
+    exit 1
+  fi
+  mkdir -p "${WORK_DIR}/files/etc/uci-defaults"
+  touch "${WORK_DIR}/files/etc/uci-defaults/99-performance-defaults"
+}
+
 expect_pass
 expect_fail_without "CONFIG_PACKAGE_uhttpd" "requires CONFIG_PACKAGE_uhttpd=y"
 expect_fail_without "CONFIG_PACKAGE_uhttpd-mod-ubus" "requires CONFIG_PACKAGE_uhttpd-mod-ubus=y"
 expect_fail_without "CONFIG_PACKAGE_rpcd-mod-luci" "requires CONFIG_PACKAGE_rpcd-mod-luci=y"
 expect_fail_without_theme
+expect_fail_without_performance_overlay
 
 echo "Config audit fixture test passed."

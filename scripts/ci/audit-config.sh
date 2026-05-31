@@ -56,6 +56,19 @@ require_luci_theme() {
   fi
 }
 
+require_file() {
+  local path="$1"
+  local description="$2"
+
+  if [ ! -f "${path}" ]; then
+    echo "ERROR: ${PROFILE_ID} requires ${description}: ${path}" >&2
+    exit 1
+  fi
+}
+
+performance_defaults_overlay="${WORKSPACE}/files/etc/uci-defaults/99-performance-defaults"
+require_file "${performance_defaults_overlay}" "runtime performance defaults overlay"
+
 mkdir -p "${WORKSPACE}/config-audit"
 cp "${OPENWRT_PATH}/.config" "${WORKSPACE}/config-audit/requested.config"
 if (cd "${OPENWRT_PATH}" && make defconfig >/dev/null); then
@@ -120,6 +133,7 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "TCP BBR: $(config_value CONFIG_PACKAGE_kmod-tcp-bbr || true)"
   echo "SQM scripts: $(config_value CONFIG_PACKAGE_sqm-scripts || true)"
   echo "CAKE scheduler: $(config_value CONFIG_PACKAGE_kmod-sched-cake || true)"
+  echo "Performance defaults overlay: present"
   echo "LuCI meta: $(config_value CONFIG_PACKAGE_luci || true)"
   echo "LuCI bootstrap theme: $(config_value CONFIG_PACKAGE_luci-theme-bootstrap || true)"
   echo "uHTTPd: $(config_value CONFIG_PACKAGE_uhttpd || true)"

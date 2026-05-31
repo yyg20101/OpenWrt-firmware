@@ -18,7 +18,9 @@ bash scripts/ci/validate-release-maintenance.sh
 bash scripts/ci/test-artifacts-release.sh
 bash scripts/ci/test-config-audit.sh
 bash scripts/ci/test-config-feeds.sh
+bash scripts/ci/test-optimization-report.sh
 bash scripts/ci/profiles.sh matrix all "" "$PWD"
+bash scripts/ci/optimization-report.sh summary "$PWD"
 ```
 
 ### 2) Test Layout
@@ -33,7 +35,7 @@ bash scripts/ci/profiles.sh matrix all "" "$PWD"
 |-------|----------|----------------|-------|
 | Unit | No | `[TODO]` | No unit framework or test files are present. |
 | Integration | Partial | Workflow/script/profile contracts | CI lint validates YAML, shell syntax, profile schema, matrix generation, Dependabot coverage, and artifact/Release fixture behavior. |
-| E2E | Manual/CI workflow | Full firmware build | `Firmware CI` performs real source clone, feeds update, compile, artifacts, and optional Release. |
+| E2E | Manual/CI workflow | Full firmware build | `Firmware CI` performs real source clone, feeds update, compile, artifacts, and optional Release. `Optimization Health` provides a read-only pre-build health report. |
 
 ### 4) Mocking and Isolation Strategy
 
@@ -58,5 +60,7 @@ bash scripts/ci/profiles.sh matrix all "" "$PWD"
 - `scripts/ci/test-artifacts-release.sh`
 - `scripts/ci/test-config-audit.sh`
 - `scripts/ci/test-config-feeds.sh`
+- `scripts/ci/test-optimization-report.sh`
+- `scripts/ci/optimization-report.sh`
 - `scripts/ci/profiles.sh`
 - `docs/firmware-ci-prd.md`

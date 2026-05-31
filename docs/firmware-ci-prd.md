@@ -30,7 +30,8 @@
   - `bash scripts/ci/profiles.sh matrix all "" "$PWD"` emits JSON with all enabled profiles.
   - `firmware-ci.yml` accepts `target=<profile-id>` or `target=all` and delegates each matrix item to `firmware-build.yml`.
   - `firmware-build.yml` does not hard-code device ids.
-  - Cache keys include source slug, branch, cache group, profile hash, and source commit hash.
+  - Cache keys include source slug, branch, cache group, and the current cache week; `PROFILE_HASH` is retained for Release metadata and health reports.
+  - `optimization-health.yml` can be manually run to generate read-only profile, matrix, and cache health reports.
   - Release publishing is disabled by default and can be enabled per dispatch with `release=true`.
 
 - **Non-Goals**:
@@ -56,6 +57,7 @@
 - **Integration Points**:
   - GitHub Actions for workflow orchestration.
   - GitHub Actions Cache for ccache and build accelerator cache.
+  - GitHub Actions read-only health reporting for profile/matrix and cache state.
   - GitHub Artifacts for compile logs and firmware outputs.
   - GitHub Releases for optional published firmware.
   - External OpenWrt source repositories and feeds.
@@ -72,6 +74,7 @@
 - **Phased Rollout**:
   - MVP: Declarative profiles, dynamic matrix, reusable build workflow, profile validation, standardized Release metadata.
   - v1.1: Add fixture tests for `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`, and `release-maintenance.sh`; artifact/Release fixtures are partially implemented.
+  - v1.2: Add read-only optimization health reporting for profiles, matrices, caches, and Release assets.
   - v2.0: Optional scheduled update checks, package ref pinning, and per-profile build concurrency controls.
 
 - **Technical Risks**:

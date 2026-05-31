@@ -28,6 +28,13 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Validates shell syntax.
   - Validates `devices/profiles.yml`.
   - Validates Dependabot ecosystem coverage.
+  - Validates optimization health summary generation.
+
+- `.github/workflows/optimization-health.yml`
+  - Manually generates a read-only firmware optimization health report.
+  - Summarizes enabled profiles, target matrix, governance checks, and GitHub Actions cache usage.
+  - Uploads report artifacts and writes the same report to the GitHub Step Summary.
+  - Does not build firmware, publish releases, or delete caches.
 
 - `.github/workflows/cache-maintenance.yml`
   - Manually lists or deletes GitHub Actions caches.
@@ -95,6 +102,22 @@ Firmware CI
     -> Upload Artifact and optional Release
 ```
 
+## Optimization Health Flow
+
+```text
+Optimization Health
+  -> Validate devices/profiles.yml
+  -> Generate profile and matrix summary
+  -> Generate GitHub Actions cache summary
+  -> Upload read-only health report
+```
+
+Use this flow before each optimization pass. The intended loop is:
+
+```text
+health report -> config audit -> firmware build -> artifact verification -> cache maintenance dry-run
+```
+
 ## CI Script Modules
 
 - `scripts/ci/profiles.sh`
@@ -131,6 +154,10 @@ Firmware CI
   - Generates standardized Release name, tag, body file, and action outputs.
   - Adds package archive and package source manifest details to the Release body when present.
 
+- `scripts/ci/optimization-report.sh`
+  - Generates read-only Markdown reports for profile/matrix health, GitHub Actions cache usage, and Release artifact assets.
+  - Keeps optimization checks visible without triggering builds, releases, or cache deletion.
+
 - `scripts/ci/validate-profiles.sh`
   - CI-facing profile validation wrapper.
 
@@ -156,4 +183,5 @@ find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-dependabot-coverage.sh
+bash scripts/ci/optimization-report.sh summary "$PWD"
 ```

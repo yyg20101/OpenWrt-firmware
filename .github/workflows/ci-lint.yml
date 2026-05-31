@@ -65,6 +65,12 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-release-maintenance.sh
 
+      - name: Validate Optimization Health Fixture / 校验优化健康报告
+        run: |
+          set -euo pipefail
+          bash scripts/ci/optimization-report.sh summary "$PWD"
+          bash scripts/ci/test-optimization-report.sh
+
       - name: Validate Artifact Release Fixture / 校验产物与发布元数据
         run: |
           set -euo pipefail
