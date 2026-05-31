@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Cleanup Releases
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const olderThanDays = Number(core.getInput("older_than_days"));
