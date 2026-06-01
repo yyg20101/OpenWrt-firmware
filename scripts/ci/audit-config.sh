@@ -91,7 +91,21 @@ if [ "$(config_value CONFIG_TARGET_x86_64)" = "y" ]; then
   require_value CONFIG_GRUB_IMAGES y
   require_value CONFIG_GRUB_EFI_IMAGES y
   require_value CONFIG_PACKAGE_irqbalance y
+  require_value CONFIG_PACKAGE_luci-app-irqbalance y
+  require_value CONFIG_PACKAGE_amd64-microcode y
+  require_value CONFIG_PACKAGE_intel-microcode y
   require_value CONFIG_PACKAGE_kmod-nft-offload y
+  require_value CONFIG_PACKAGE_kmod-e1000e y
+  require_value CONFIG_PACKAGE_kmod-igb y
+  require_value CONFIG_PACKAGE_kmod-igc y
+  require_value CONFIG_PACKAGE_kmod-ixgbe y
+  require_value CONFIG_PACKAGE_kmod-r8125 y
+  require_value CONFIG_PACKAGE_kmod-r8169 y
+  require_value CONFIG_PACKAGE_kmod-virtio y
+  require_value CONFIG_PACKAGE_kmod-virtio-net y
+  require_value CONFIG_PACKAGE_kmod-virtio-pci y
+  require_value CONFIG_PACKAGE_kmod-ata-ahci y
+  require_value CONFIG_PACKAGE_kmod-nvme y
   forbidden_enabled CONFIG_VMDK_IMAGES
   forbidden_enabled CONFIG_VDI_IMAGES
   forbidden_enabled CONFIG_VHDX_IMAGES
@@ -130,6 +144,20 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "autosamba: $(config_value CONFIG_PACKAGE_autosamba || true)"
   echo "WireGuard kmod: $(config_value CONFIG_PACKAGE_kmod-wireguard || true)"
   echo "irqbalance: $(config_value CONFIG_PACKAGE_irqbalance || true)"
+  echo "LuCI irqbalance: $(config_value CONFIG_PACKAGE_luci-app-irqbalance || true)"
+  echo "AMD microcode: $(config_value CONFIG_PACKAGE_amd64-microcode || true)"
+  echo "Intel microcode: $(config_value CONFIG_PACKAGE_intel-microcode || true)"
+  echo "x86 NIC e1000e: $(config_value CONFIG_PACKAGE_kmod-e1000e || true)"
+  echo "x86 NIC igb: $(config_value CONFIG_PACKAGE_kmod-igb || true)"
+  echo "x86 NIC igc: $(config_value CONFIG_PACKAGE_kmod-igc || true)"
+  echo "x86 NIC ixgbe: $(config_value CONFIG_PACKAGE_kmod-ixgbe || true)"
+  echo "x86 NIC r8125: $(config_value CONFIG_PACKAGE_kmod-r8125 || true)"
+  echo "x86 NIC r8169: $(config_value CONFIG_PACKAGE_kmod-r8169 || true)"
+  echo "x86 virtio core: $(config_value CONFIG_PACKAGE_kmod-virtio || true)"
+  echo "x86 virtio net: $(config_value CONFIG_PACKAGE_kmod-virtio-net || true)"
+  echo "x86 virtio pci: $(config_value CONFIG_PACKAGE_kmod-virtio-pci || true)"
+  echo "x86 AHCI: $(config_value CONFIG_PACKAGE_kmod-ata-ahci || true)"
+  echo "x86 NVMe: $(config_value CONFIG_PACKAGE_kmod-nvme || true)"
   echo "TCP BBR: $(config_value CONFIG_PACKAGE_kmod-tcp-bbr || true)"
   echo "SQM scripts: $(config_value CONFIG_PACKAGE_sqm-scripts || true)"
   echo "CAKE scheduler: $(config_value CONFIG_PACKAGE_kmod-sched-cake || true)"

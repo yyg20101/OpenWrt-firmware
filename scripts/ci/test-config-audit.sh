@@ -43,7 +43,21 @@ CONFIG_GRUB_EFI_IMAGES=y
 # CONFIG_VHDX_IMAGES is not set
 # CONFIG_QCOW2_IMAGES is not set
 CONFIG_PACKAGE_irqbalance=y
+CONFIG_PACKAGE_luci-app-irqbalance=y
+CONFIG_PACKAGE_amd64-microcode=y
+CONFIG_PACKAGE_intel-microcode=y
 CONFIG_PACKAGE_kmod-nft-offload=y
+CONFIG_PACKAGE_kmod-e1000e=y
+CONFIG_PACKAGE_kmod-igb=y
+CONFIG_PACKAGE_kmod-igc=y
+CONFIG_PACKAGE_kmod-ixgbe=y
+CONFIG_PACKAGE_kmod-r8125=y
+CONFIG_PACKAGE_kmod-r8169=y
+CONFIG_PACKAGE_kmod-virtio=y
+CONFIG_PACKAGE_kmod-virtio-net=y
+CONFIG_PACKAGE_kmod-virtio-pci=y
+CONFIG_PACKAGE_kmod-ata-ahci=y
+CONFIG_PACKAGE_kmod-nvme=y
 CONFIG_PACKAGE_luci-app-samba4=y
 # CONFIG_PACKAGE_autosamba is not set
 CONFIG_PACKAGE_wireguard-tools=y
@@ -125,6 +139,11 @@ expect_pass
 expect_fail_without "CONFIG_PACKAGE_uhttpd" "requires CONFIG_PACKAGE_uhttpd=y"
 expect_fail_without "CONFIG_PACKAGE_uhttpd-mod-ubus" "requires CONFIG_PACKAGE_uhttpd-mod-ubus=y"
 expect_fail_without "CONFIG_PACKAGE_rpcd-mod-luci" "requires CONFIG_PACKAGE_rpcd-mod-luci=y"
+expect_fail_without "CONFIG_PACKAGE_luci-app-irqbalance" "requires CONFIG_PACKAGE_luci-app-irqbalance=y"
+expect_fail_without "CONFIG_PACKAGE_intel-microcode" "requires CONFIG_PACKAGE_intel-microcode=y"
+expect_fail_without "CONFIG_PACKAGE_kmod-e1000e" "requires CONFIG_PACKAGE_kmod-e1000e=y"
+expect_fail_without "CONFIG_PACKAGE_kmod-virtio-net" "requires CONFIG_PACKAGE_kmod-virtio-net=y"
+expect_fail_without "CONFIG_PACKAGE_kmod-nvme" "requires CONFIG_PACKAGE_kmod-nvme=y"
 expect_fail_without_theme
 expect_fail_without_performance_overlay
 

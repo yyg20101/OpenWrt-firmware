@@ -44,6 +44,7 @@ compile_firmware() {
   local output_target="${3:-${GITHUB_OUTPUT:-}}"
   local env_target="${4:-${GITHUB_ENV:-}}"
   local compile_log="${workspace}/compile.log"
+  local failure_dir="${workspace}/failure-context"
   local build_exit=0
   local jobs=1
   local max_jobs="${MAKE_COMPILE_JOBS:-}"
@@ -82,6 +83,36 @@ compile_firmware() {
     return 0
   fi
 
+  mkdir -p "${failure_dir}"
+  cp "${compile_log}" "${failure_dir}/compile.log" 2>/dev/null || true
+  tail -n 300 "${compile_log}" > "${failure_dir}/compile-tail.log" 2>/dev/null || true
+  grep -E '^(CONFIG_TARGET_|# CONFIG_TARGET_)' "${openwrt_path}/.config" > "${failure_dir}/target-config.txt" 2>/dev/null || true
+  grep -E '^(CONFIG_PACKAGE_|# CONFIG_PACKAGE_)' "${openwrt_path}/.config" > "${failure_dir}/package-config.txt" 2>/dev/null || true
+  {
+    echo "Compile jobs: ${jobs}"
+    echo "Runner cores: $(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown)"
+    echo "Requested max jobs: ${max_jobs:-auto}"
+    echo "OpenWrt path: ${openwrt_path}"
+    echo "Workspace: ${workspace}"
+    echo "Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    echo
+    echo "== Disk =="
+    df -hT "${workspace}" 2>/dev/null || true
+    echo
+    echo "== Memory =="
+    free -h 2>/dev/null || true
+    echo
+    echo "== ccache =="
+    ccache -s 2>/dev/null || true
+    echo
+    echo "== OpenWrt tree sizes =="
+    du -sh "${openwrt_path}/build_dir" "${openwrt_path}/staging_dir" "${openwrt_path}/dl" "${openwrt_path}/.ccache" 2>/dev/null || true
+  } > "${failure_dir}/summary.txt"
+
+  if [ -f "${openwrt_path}/.config" ]; then
+    cp "${openwrt_path}/.config" "${failure_dir}/build.config" 2>/dev/null || true
+  fi
+
   append_line "${output_target}" "status=failure"
   return "${build_exit}"
 }
@@ -90,22 +121,52 @@ dump_failure_context() {
   local openwrt_path="$1"
   local workspace="$2"
   local compile_log="${workspace}/compile.log"
+  local failure_dir="${workspace}/failure-context"
   local failed_pkg=""
+  local rebuild_target=""
+
+  mkdir -p "${failure_dir}"
 
   echo "::group::Compile Log Tail (last 300 lines)"
   tail -n 300 "${compile_log}" || true
   echo "::endgroup::"
 
+  cp "${compile_log}" "${failure_dir}/compile.log" 2>/dev/null || true
+  tail -n 300 "${compile_log}" > "${failure_dir}/compile-tail.log" 2>/dev/null || true
+  if [ -f "${openwrt_path}/.config" ]; then
+    cp "${openwrt_path}/.config" "${failure_dir}/build.config" 2>/dev/null || true
+    grep -E '^(CONFIG_TARGET_|# CONFIG_TARGET_)' "${openwrt_path}/.config" > "${failure_dir}/target-config.txt" 2>/dev/null || true
+    grep -E '^(CONFIG_PACKAGE_|# CONFIG_PACKAGE_)' "${openwrt_path}/.config" > "${failure_dir}/package-config.txt" 2>/dev/null || true
+  fi
+
   failed_pkg="$(grep -oE 'package/[^ ]+ failed to build' "${compile_log}" | tail -1 | awk '{print $1}' || true)"
   if [ -z "${failed_pkg}" ]; then
     echo "No failed package detected in compile.log, skip package rebuild."
+    {
+      echo "Failed package: not detected"
+      echo "OpenWrt path: ${openwrt_path}"
+      echo "Workspace: ${workspace}"
+      echo "Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    } > "${failure_dir}/failed-package.txt"
     return 0
   fi
+  case "${failed_pkg}" in
+    */compile) rebuild_target="${failed_pkg}" ;;
+    *) rebuild_target="${failed_pkg}/compile" ;;
+  esac
 
-  echo "::group::Verbose Rebuild (${failed_pkg}, -j1 V=s)"
+  echo "::group::Verbose Rebuild (${rebuild_target}, -j1 V=s)"
   cd "${openwrt_path}"
-  make "${failed_pkg}/compile" -j1 V=s || true
+  make "${rebuild_target}" -j1 V=s 2>&1 | tee "${failure_dir}/verbose-rebuild.log" || true
   echo "::endgroup::"
+
+  {
+    echo "Failed package: ${failed_pkg}"
+    echo "Rebuild target: ${rebuild_target}"
+    echo "OpenWrt path: ${openwrt_path}"
+    echo "Workspace: ${workspace}"
+    echo "Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  } > "${failure_dir}/failed-package.txt"
 }
 
 optimize_build_directories() {

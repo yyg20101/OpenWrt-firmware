@@ -95,4 +95,27 @@ assert_match '## Package Sources' "${WORK_DIR}/release-body.md"
 assert_match 'Openwrt-Passwall/openwrt-passwall' "${WORK_DIR}/release-body.md"
 assert_match 'feature\\\|pipe' "${WORK_DIR}/release-body.md"
 
+mkdir -p "${OPENWRT_DIR}/package/feeds/test/failure"
+cat > "${OPENWRT_DIR}/Makefile" <<'EOF'
+.PHONY: package/feeds/test/failure/compile
+package/feeds/test/failure/compile:
+	@echo "verbose rebuild fixture"
+EOF
+cat > "${TMP_DIR}/compile.log" <<'EOF'
+first compile line
+package/feeds/test/failure failed to build
+last compile line
+EOF
+
+bash "${ROOT_DIR}/scripts/ci/build-artifacts.sh" dump-failure-context "${OPENWRT_DIR}" "${TMP_DIR}" >/dev/null
+assert_file "${TMP_DIR}/failure-context/compile.log"
+assert_file "${TMP_DIR}/failure-context/compile-tail.log"
+assert_file "${TMP_DIR}/failure-context/build.config"
+assert_file "${TMP_DIR}/failure-context/target-config.txt"
+assert_file "${TMP_DIR}/failure-context/package-config.txt"
+assert_file "${TMP_DIR}/failure-context/failed-package.txt"
+assert_file "${TMP_DIR}/failure-context/verbose-rebuild.log"
+assert_match 'Failed package: package/feeds/test/failure' "${TMP_DIR}/failure-context/failed-package.txt"
+assert_match 'verbose rebuild fixture' "${TMP_DIR}/failure-context/verbose-rebuild.log"
+
 echo "Artifact and release fixture test passed."

@@ -74,7 +74,7 @@ jobs:
             jq libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libncurses5-dev \
             libncursesw5-dev libpython3-dev libreadline-dev libssl-dev libtool llvm lrzsz msmtp ninja-build \
             p7zip p7zip-full patch pkgconf python3 python3-pyelftools python3-setuptools \
-            qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget \
+            qemu-system-x86 qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget \
             xmlto xxd zlib1g-dev
           sudo -E apt-get -qq autoremove --purge
           sudo -E apt-get -qq clean
@@ -235,6 +235,15 @@ jobs:
           set -euo pipefail
           bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" dump-failure-context "$OPENWRT_PATH" "$GITHUB_WORKSPACE"
 
+      - name: Upload Failure Context
+        if: steps.compile.outputs.status == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: failure-context-${{ inputs.profile }}-${{ github.run_id }}
+          path: ${{ github.workspace }}/failure-context/*
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Fail Build On Compile Error
         if: steps.compile.outputs.status == 'failure'
         run: exit 1
@@ -272,6 +281,23 @@ jobs:
           name: firmware-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ steps.artifacts.outputs.firmware_path }}/*
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Smoke X86 Artifact / 烟测 X86 产物
+        if: steps.compile.outputs.status == 'success' && startsWith(inputs.profile, 'x86_64_')
+        env:
+          SMOKE_X86_STRICT: "1"
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/scripts/ci/smoke-x86.sh" "$OPENWRT_PATH" "$FIRMWARE_PATH" "$GITHUB_WORKSPACE" "$PROFILE_ID"
+
+      - name: Upload Smoke Report / 上传烟测报告
+        if: steps.compile.outputs.status == 'success' && startsWith(inputs.profile, 'x86_64_')
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-x86-${{ inputs.profile }}-${{ github.run_id }}
+          path: ${{ github.workspace }}/smoke-x86/*
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Publish GitHub Release
