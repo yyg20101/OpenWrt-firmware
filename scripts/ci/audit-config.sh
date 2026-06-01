@@ -101,9 +101,9 @@ if [ "$(config_value CONFIG_TARGET_x86_64)" = "y" ]; then
   require_value CONFIG_PACKAGE_kmod-ixgbe y
   require_value CONFIG_PACKAGE_kmod-r8125 y
   require_value CONFIG_PACKAGE_kmod-r8169 y
-  require_value CONFIG_PACKAGE_kmod-virtio y
   require_value CONFIG_PACKAGE_kmod-virtio-net y
   require_value CONFIG_PACKAGE_kmod-virtio-pci y
+  require_value CONFIG_PACKAGE_kmod-virtio-random y
   require_value CONFIG_PACKAGE_kmod-ata-ahci y
   require_value CONFIG_PACKAGE_kmod-nvme y
   forbidden_enabled CONFIG_VMDK_IMAGES
@@ -156,6 +156,7 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "x86 virtio core: $(config_value CONFIG_PACKAGE_kmod-virtio || true)"
   echo "x86 virtio net: $(config_value CONFIG_PACKAGE_kmod-virtio-net || true)"
   echo "x86 virtio pci: $(config_value CONFIG_PACKAGE_kmod-virtio-pci || true)"
+  echo "x86 virtio random: $(config_value CONFIG_PACKAGE_kmod-virtio-random || true)"
   echo "x86 AHCI: $(config_value CONFIG_PACKAGE_kmod-ata-ahci || true)"
   echo "x86 NVMe: $(config_value CONFIG_PACKAGE_kmod-nvme || true)"
   echo "TCP BBR: $(config_value CONFIG_PACKAGE_kmod-tcp-bbr || true)"
