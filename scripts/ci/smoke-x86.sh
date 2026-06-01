@@ -24,8 +24,42 @@ if [ -z "${image_path}" ]; then
   exit 1
 fi
 
+gzip_warning=""
+
+set +e
 gzip -t "${image_path}"
+gzip_status=$?
+set -e
+case "${gzip_status}" in
+  0)
+    ;;
+  2)
+    gzip_warning="gzip reported a warning while checking ${image_path}."
+    ;;
+  *)
+    echo "ERROR: x86 smoke could not validate gzip image ${image_path}." >&2
+    exit "${gzip_status}"
+    ;;
+esac
+
+set +e
 gzip -dc "${image_path}" > "${raw_image}"
+gzip_status=$?
+set -e
+case "${gzip_status}" in
+  0)
+    ;;
+  2)
+    if [ -n "${gzip_warning}" ]; then
+      gzip_warning="${gzip_warning} "
+    fi
+    gzip_warning="${gzip_warning}gzip reported a warning while extracting ${image_path}."
+    ;;
+  *)
+    echo "ERROR: x86 smoke could not decompress image ${image_path}." >&2
+    exit "${gzip_status}"
+    ;;
+esac
 
 ruby - "${raw_image}" "${partition_table}" <<'RUBY'
 raw_path = ARGV.fetch(0)
@@ -98,6 +132,7 @@ fi
   echo "Mode: ${mode}"
   echo "Boot status: ${boot_status}"
   echo "Static checks: passed"
+  echo "Gzip warning: ${gzip_warning:-none}"
   echo "Partition table: $(sed -n '1p' "${partition_table}" 2>/dev/null || echo unknown)"
   echo "Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 } > "${summary_file}"

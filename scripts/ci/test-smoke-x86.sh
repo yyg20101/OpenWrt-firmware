@@ -36,5 +36,14 @@ done
 grep -q 'Mode: static' "${WORK_DIR}/smoke-x86/summary.txt"
 grep -q 'Partition table: MBR' "${WORK_DIR}/smoke-x86/partition-table.txt"
 grep -q 'Static checks: passed' "${WORK_DIR}/smoke-x86/summary.txt"
+grep -q 'Gzip warning: none' "${WORK_DIR}/smoke-x86/summary.txt"
+
+rm -rf "${WORK_DIR}/smoke-x86"
+printf 'trailing-bytes' >> "${FIRMWARE_DIR}/openwrt-x86-64-generic-squashfs-combined.img.gz"
+
+bash "${ROOT_DIR}/scripts/ci/smoke-x86.sh" "${OPENWRT_DIR}" "${FIRMWARE_DIR}" "${WORK_DIR}" "x86_64_fixture_trailing" >/dev/null
+
+grep -q 'Static checks: passed' "${WORK_DIR}/smoke-x86/summary.txt"
+grep -q 'Gzip warning: gzip reported a warning' "${WORK_DIR}/smoke-x86/summary.txt"
 
 echo "x86 smoke fixture test passed."
