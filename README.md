@@ -52,6 +52,7 @@ my_profile:
   source_branch: main
   firmware_tag: my-platform
   cache_group: my-cache-group
+  make_compile_jobs: 2
   groups:
     - my_group
   config: devices/my_profile/.config
@@ -69,6 +70,8 @@ my_profile:
 - `samba.config`：Samba4 文件共享栈，并显式禁用 autosamba
 
 平台、源码系、设备族和性能优化差异继续通过 profile 的 `config_fragments` 追加，例如 `x86.config`、`x86-performance.config`、`qualcommax-ipq60xx.config`、`lede-extra.config`。x86 性能片段同时启用 Intel/AMD microcode，降低 CPU errata 和虚拟化/软路由场景下的稳定性风险。
+
+`make_compile_jobs` 是可选项。缺省时构建会使用 runner CPU 数；当某个上游源码或 profile 在 GitHub hosted runner 上容易因为内存压力失败时，为该 profile 设置较小的正整数。当前 `x86_64_immortalWrt` 使用 `make_compile_jobs: 2`，`x86_64_LEDE` 保持自动并行。
 
 3. 运行本地校验：
 
@@ -91,6 +94,16 @@ bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 ```
+
+## Operations Order
+
+优化或全量构建前建议按以下顺序执行：
+
+1. 手动运行 `Optimization Health`，确认 profile、上游漂移、matrix 和 cache 分组状态。
+2. 先触发 `Firmware CI` 的 `target=x86_64_all`，确认两个 x86 profile 生成 artifact 并通过 x86 smoke。
+3. x86 稳定后再触发 `target=qualcommax_all` 或 `target=all`。
+4. Cache 接近容量上限时，先运行 `Cache Maintenance` dry-run；真实删除必须指定 `prefix` 或 `ref`，并保留匹配范围内最新缓存。
+5. 需要发布固件时，对单个 profile 使用 `release=true`；分组或 `all` 发布不会抢占 GitHub Latest。
 
 ## Release Contract
 

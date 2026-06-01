@@ -78,6 +78,11 @@ Profiles may also set `make_compile_jobs` directly to cap OpenWrt compile
 parallelism for source trees that are memory-sensitive on GitHub-hosted
 runners. When omitted, the build uses the runner CPU count.
 
+Current usage pattern:
+
+- `x86_64_immortalWrt` sets `make_compile_jobs: 2` because the source tree is more memory-sensitive on GitHub-hosted runners.
+- `x86_64_LEDE` leaves compile parallelism on auto because it has not needed a cap yet.
+
 `scripts/ci/profiles.sh export-env` writes profile values to both `GITHUB_ENV` and `GITHUB_OUTPUT`, so shell steps and action expressions use the same resolved contract.
 
 `scripts/ci/profiles.sh target-options` generates the supported manual dispatch targets from enabled profiles, their groups, and `all`. `scripts/ci/sync-workflow-target-options.sh` writes those targets into `.github/workflows/firmware-ci.yml`, keeping the GitHub manual dispatch dropdown aligned with `devices/profiles.yml`.
@@ -122,6 +127,13 @@ Use this flow before each optimization pass. The intended loop is:
 ```text
 health report -> config audit -> firmware build -> artifact verification -> cache maintenance dry-run
 ```
+
+Recommended operating order:
+
+1. Run `Optimization Health` first so profile drift, cache grouping, and matrix shape are visible before any build.
+2. Run `Firmware CI` for `target=x86_64_all` next and inspect both x86 profiles before widening to other targets.
+3. Run `Cache Maintenance` in dry-run mode before any real cache cleanup, and only delete within a bounded `prefix` or `ref`.
+4. Use `release=true` only for a single selected profile when a GitHub Release is intended to become the latest release.
 
 ## CI Script Modules
 
@@ -180,6 +192,7 @@ health report -> config audit -> firmware build -> artifact verification -> cach
 - Keep long shell logic in `scripts/ci/*.sh`, not workflow YAML.
 - Preserve profile output names when refactoring cache, artifact, or Release behavior.
 - Keep cache deletion workflows filtered by `prefix` or `ref`; dry-run is the only broad mode.
+- Treat `x86_64_all` as the preferred preflight target for build and smoke validation before broader profile groups.
 - Run local validation before pushing:
 
 ```bash

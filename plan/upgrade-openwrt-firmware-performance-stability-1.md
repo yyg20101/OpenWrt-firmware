@@ -53,7 +53,7 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-005 | Keep cache keys grouped by source slug, branch, cache group, and cache week in `.github/workflows/firmware-build.yml`, and expose matched key and cache group summaries in `scripts/ci/optimization-report.sh`. | ✅ | 2026-06-01 |
-| TASK-006 | Tune `make_compile_jobs` per profile in `devices/profiles.yml` and keep the fallback path in `scripts/ci/build-artifacts.sh` so memory-sensitive sources do not fail under parallel load. |  |  |
+| TASK-006 | Tune `make_compile_jobs` per profile in `devices/profiles.yml` and keep the fallback path in `scripts/ci/build-artifacts.sh` so memory-sensitive sources do not fail under parallel load. | ✅ | 2026-06-01 |
 | TASK-007 | Preserve layered config fragments in `scripts/common/config/*.config` and `devices/profiles.yml` so performance capabilities remain traceable to a specific fragment. | ✅ | 2026-06-01 |
 | TASK-008 | Keep cache maintenance reviewable through `.github/workflows/cache-maintenance.yml` and `scripts/ci/validate-cache-maintenance.sh`, with cleanup rules based on prefix or ref. | ✅ | 2026-06-01 |
 
@@ -64,7 +64,7 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-009 | Keep release and artifact integrity checks in `scripts/ci/test-artifacts-release.sh`, `scripts/ci/validate-release-maintenance.sh`, and `.github/workflows/release-maintenance.yml`. | ✅ | 2026-06-01 |
-| TASK-010 | Document the maintenance cadence and operating order in `docs/ci-workflow-architecture.md`, `docs/firmware-ci-prd.md`, and `README.md`. |  |  |
+| TASK-010 | Document the maintenance cadence and operating order in `docs/ci-workflow-architecture.md`, `docs/firmware-ci-prd.md`, and `README.md`. | ✅ | 2026-06-01 |
 | TASK-011 | Re-run `Optimization Health`, then `Firmware CI` for `x86_64_all`, and record the result in the workflow outputs before widening to the other profile groups. |  |  |
 
 ## 3. Alternatives

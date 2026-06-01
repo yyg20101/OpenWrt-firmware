@@ -31,8 +31,10 @@
   - `firmware-ci.yml` accepts `target=<profile-id>` or `target=all` and delegates each matrix item to `firmware-build.yml`.
   - `firmware-build.yml` does not hard-code device ids.
   - Profiles can cap compile parallelism with `make_compile_jobs` when a source tree is memory-sensitive on GitHub-hosted runners.
+  - x86 profiles are verified first with `target=x86_64_all` before broader profile groups are treated as stable.
   - Cache keys include source slug, branch, cache group, and the current cache week; `PROFILE_HASH` is retained for Release metadata and health reports.
   - `optimization-health.yml` can be manually run to generate read-only profile, matrix, and cache health reports.
+  - Cache maintenance uses dry-run by default and requires `prefix` or `ref` before deleting caches.
   - Release publishing is disabled by default and can be enabled per dispatch with `release=true`.
 
 - **Non-Goals**:
@@ -76,6 +78,7 @@
   - MVP: Declarative profiles, dynamic matrix, reusable build workflow, profile validation, standardized Release metadata.
   - v1.1: Add fixture tests for `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`, and `release-maintenance.sh`; artifact/Release fixtures are partially implemented.
   - v1.2: Add read-only optimization health reporting for profiles, matrices, caches, and Release assets.
+  - v1.3: Use x86-first validation, cache dry-runs, and documented maintenance order before broad profile builds.
   - v2.0: Optional scheduled update checks, package ref pinning, and per-profile build concurrency controls.
 
 - **Technical Risks**:
