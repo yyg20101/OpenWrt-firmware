@@ -39,6 +39,8 @@ fail!("cache cleanup must use deleteActionsCacheById") unless body.include?("del
 fail!("workflow_dispatch inputs must be forwarded to github-script env") unless body.include?("OLDER_THAN_DAYS: ${{ inputs.older_than_days }}")
 fail!("dry_run must be parsed from forwarded env") unless body.include?("process.env.DRY_RUN")
 fail!("cache API list request must pass ref when provided") unless body.include?("listRequest.ref = ref")
+fail!("cache API list request must use explicit REST pagination") unless body.include?('github.request("GET /repos/{owner}/{repo}/actions/caches"')
+fail!("cache API list request must not use getActionsCacheList wrapper") if body.include?("getActionsCacheList")
 fail!("cache cleanup must keep latest entries per cache group") unless body.include?("cacheGroupKey") && body.include?("groupCounts")
 fail!("cache cleanup must not use global matched.slice retention") if body.include?("matched.slice(0, keepLatest)")
 fail!("cache cleanup must log candidate counts") unless body.include?("Cleanup candidates: ${candidates.length}")
