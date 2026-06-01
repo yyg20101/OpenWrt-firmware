@@ -40,6 +40,7 @@ fail!("workflow_dispatch inputs must be forwarded to github-script env") unless 
 fail!("dry_run must be parsed from forwarded env") unless body.include?("process.env.DRY_RUN")
 fail!("cache cleanup must keep latest entries per cache group") unless body.include?("cacheGroupKey") && body.include?("groupCounts")
 fail!("cache cleanup must not use global matched.slice retention") if body.include?("matched.slice(0, keepLatest)")
+fail!("cache cleanup must log candidate counts") unless body.include?("Cleanup candidates: ${candidates.length}")
 
 puts "Cache Maintenance workflow guard passed."
 RUBY

@@ -115,6 +115,9 @@ jobs:
             }
 
             candidates.sort((a, b) => new Date(a.last_accessed_at) - new Date(b.last_accessed_at));
+            core.info(`Matched caches: ${matched.length}`);
+            core.info(`Matched cache groups: ${groupCounts.size}`);
+            core.info(`Cleanup candidates: ${candidates.length}`);
             core.summary.addHeading("Cache cleanup candidates");
             core.summary.addRaw(`Dry run: ${dryRun}\n\n`);
             core.summary.addRaw(`Prefix: ${prefix || "(any)"}\n\n`);
