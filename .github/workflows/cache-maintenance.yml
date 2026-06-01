@@ -40,13 +40,24 @@ jobs:
     steps:
       - name: Cleanup Caches
         uses: actions/github-script@v9
+        env:
+          OLDER_THAN_DAYS: ${{ inputs.older_than_days }}
+          CACHE_PREFIX: ${{ inputs.prefix }}
+          CACHE_REF: ${{ inputs.ref }}
+          KEEP_LATEST: ${{ inputs.keep_latest }}
+          DRY_RUN: ${{ inputs.dry_run }}
         with:
           script: |
-            const olderThanDays = Number(core.getInput("older_than_days"));
-            const prefix = core.getInput("prefix");
-            const ref = core.getInput("ref");
-            const keepLatest = Number(core.getInput("keep_latest"));
-            const dryRun = core.getBooleanInput("dry_run");
+            const olderThanDays = Number(process.env.OLDER_THAN_DAYS);
+            const prefix = process.env.CACHE_PREFIX || "";
+            const ref = process.env.CACHE_REF || "";
+            const keepLatest = Number(process.env.KEEP_LATEST);
+            const dryRunInput = process.env.DRY_RUN || "true";
+            const dryRun = /^(true|True|TRUE)$/.test(dryRunInput);
+
+            if (!/^(true|True|TRUE|false|False|FALSE)$/.test(dryRunInput)) {
+              throw new Error(`dry_run must be true or false, got ${dryRunInput}`);
+            }
 
             if (!Number.isFinite(olderThanDays) || olderThanDays < 0) {
               throw new Error(`older_than_days must be a non-negative number, got ${olderThanDays}`);

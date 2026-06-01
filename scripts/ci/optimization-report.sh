@@ -354,11 +354,14 @@ EOF
   awk -F '\t' '
     function group_key(key, parts) {
       split(key, parts, "-")
-      if (length(parts[1]) == 0) {
+      if (parts[1] == "") {
         return "(unknown)"
       }
-      if (parts[1] == "ccache" || parts[1] == "build") {
-        return parts[1] "-" parts[2]
+      if (parts[1] == "ccache" && parts[2] == "v2" && parts[3] != "" && parts[4] != "" && parts[5] != "") {
+        return parts[1] "-" parts[2] "-" parts[3] "-" parts[4] "-" parts[5]
+      }
+      if (parts[1] == "build" && parts[2] == "accel" && parts[3] == "v2" && parts[4] != "" && parts[5] != "" && parts[6] != "") {
+        return parts[1] "-" parts[2] "-" parts[3] "-" parts[4] "-" parts[5] "-" parts[6]
       }
       return parts[1]
     }

@@ -94,8 +94,9 @@ grep -q "release:firmware-x86_64_LEDE" "${TMP_DIR}/profile-drift.md"
 PATH="${FAKE_BIN}:${PATH}" \
   bash "${ROOT_DIR}/scripts/ci/optimization-report.sh" cache "owner/repo" > "${TMP_DIR}/cache.md"
 grep -q "Cache Prefix Groups" "${TMP_DIR}/cache.md"
-grep -q 'ccache-v2.*2.*3.00 MiB' "${TMP_DIR}/cache.md"
-grep -q 'build-accel.*1.*3.00 MiB' "${TMP_DIR}/cache.md"
+grep -q 'ccache-v2-coolsnowwolf_lede-master-x86_64.*1.*1.00 MiB' "${TMP_DIR}/cache.md"
+grep -q 'ccache-v2-immortalwrt_immortalwrt-master-x86_64.*1.*2.00 MiB' "${TMP_DIR}/cache.md"
+grep -q 'build-accel-v2-coolsnowwolf_lede-master-x86_64.*1.*3.00 MiB' "${TMP_DIR}/cache.md"
 
 PATH="${FAKE_BIN}:${PATH}" \
   bash "${ROOT_DIR}/scripts/ci/optimization-report.sh" release "owner/repo" "firmware-test" > "${TMP_DIR}/release-pass.md"
