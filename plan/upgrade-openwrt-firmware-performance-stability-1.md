@@ -79,7 +79,7 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 | TASK-013 | Keep `scripts/common/config/x86-performance.config` enabling irqbalance, microcode, common physical NIC drivers, virtio drivers, and QEMU guest agent for physical and virtual x86 deployments. | ✅ | 2026-06-01 |
 | TASK-014 | Keep `files/etc/uci-defaults/99-performance-defaults` limited to conservative sysctl defaults: `fq_codel`, BBR, TCP Fast Open, MTU probing, backlog, and TCP buffer ranges. | ✅ | 2026-06-01 |
 | TASK-015 | Extend `scripts/ci/audit-config.sh` and `scripts/ci/test-config-audit.sh` when new performance defaults are added so missing overlay files, missing core packages, Samba4/autosamba conflicts, and x86 boot capability regressions fail during configuration. |  |  |
-| TASK-016 | Add size and rootfs pressure reporting to `scripts/ci/build-artifacts.sh` or `scripts/ci/optimization-report.sh` so required plugin growth is visible without removing plugins. |  |  |
+| TASK-016 | Add size and rootfs pressure reporting to `scripts/ci/build-artifacts.sh` or `scripts/ci/optimization-report.sh` so required plugin growth is visible without removing plugins. | ✅ | 2026-06-01 |
 
 ### Implementation Phase 4
 
@@ -89,8 +89,8 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 |------|-------------|-----------|------|
 | TASK-017 | Keep release and artifact integrity checks in `scripts/ci/test-artifacts-release.sh`, `scripts/ci/validate-release-maintenance.sh`, and `.github/workflows/release-maintenance.yml`. | ✅ | 2026-06-01 |
 | TASK-018 | Document the maintenance cadence and operating order in `docs/ci-workflow-architecture.md`, `docs/firmware-ci-prd.md`, `docs/openwrt-firmware-performance-stability-plan.md`, `README.md`, and this plan. | ✅ | 2026-06-01 |
-| TASK-019 | Add package overlay provenance reporting for `scripts/common/Packages.sh` and `scripts/common/package` so artifact metadata can distinguish local config regressions from upstream package changes. |  |  |
-| TASK-020 | Add explicit build-environment provenance to `.github/workflows/firmware-build.yml`, including runner image, remote initialization script URL, script download timestamp, and script checksum when available. |  |  |
+| TASK-019 | Add package overlay provenance reporting for `scripts/common/Packages.sh` and `scripts/common/package` so artifact metadata can distinguish local config regressions from upstream package changes. | ✅ | 2026-06-01 |
+| TASK-020 | Add explicit build-environment provenance to `.github/workflows/firmware-build.yml`, including runner image, remote initialization script URL, script download timestamp, and script checksum when available. | ✅ | 2026-06-01 |
 
 ### Implementation Phase 5
 
@@ -219,3 +219,4 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 | Direct GitHub cache API check | `GET /repos/yyg20101/OpenWrt-firmware/actions/caches?ref=refs/heads/main` returned eight caches; `ref=main` returned zero, confirming the maintenance workflow must preserve the full ref string. | 2026-06-01 |
 | Cache maintenance workflow local validation | `.github/workflows/cache-maintenance.yml` now uses explicit REST pagination through `github.request("GET /repos/{owner}/{repo}/actions/caches", ...)`; `scripts/ci/validate-cache-maintenance.sh` prevents returning to `getActionsCacheList`. | 2026-06-01 |
 | Cache maintenance dry-run `26762407724` | Successful on commit `8092f61`; log reported `Matched caches: 8`, `Matched cache groups: 4`, `Cleanup candidates: 4`, and listed only `Would delete` entries for the four `2026-21` caches. | 2026-06-01 |
+| Artifact and provenance enhancement local validation | `test-artifacts-release.sh`, `test-config-feeds.sh`, workflow YAML parsing, shell syntax checks, `test-config-audit.sh`, `test-smoke-x86.sh`, `test-optimization-report.sh`, `validate-profiles.sh`, `validate-cache-maintenance.sh`, and `validate-release-maintenance.sh` passed after adding `firmware-size-report.md`, local overlay script provenance, and build environment provenance. | 2026-06-01 |

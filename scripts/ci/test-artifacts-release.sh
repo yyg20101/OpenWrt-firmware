@@ -18,6 +18,8 @@ mkdir -p "${TARGET_DIR}" "${OPENWRT_DIR}/bin/packages/a/b" "${WORK_DIR}"
 cat > "${OPENWRT_DIR}/.config" <<'EOF'
 CONFIG_TARGET_x86_64=y
 CONFIG_GRUB_EFI_IMAGES=y
+CONFIG_TARGET_KERNEL_PARTSIZE=128
+CONFIG_TARGET_ROOTFS_PARTSIZE=1024
 EOF
 
 touch \
@@ -32,7 +34,16 @@ package	repository	ref	commit	mode
 passwall	Openwrt-Passwall/openwrt-passwall	main	1234567890abcdef	pkg
 table-safe	example/repo	feature|pipe	abcdef1234567890	name
 EOF
+cat > "${WORK_DIR}/build-environment-provenance.md" <<'EOF'
+# Build Environment Provenance
 
+| Field | Value |
+|-------|-------|
+| Init script URL | https://example.invalid/init.sh |
+| Init script sha256 | abcdef123456 |
+EOF
+
+GITHUB_WORKSPACE="${WORK_DIR}" \
 bash "${ROOT_DIR}/scripts/ci/build-artifacts.sh" organize-firmware-files "${OPENWRT_DIR}" "${TMP_DIR}/env" "${TMP_DIR}/out"
 FIRMWARE_PATH="$(awk -F= '$1 == "firmware_path" { print substr($0, index($0, "=") + 1) }' "${TMP_DIR}/out")"
 bash "${ROOT_DIR}/scripts/ci/build-artifacts.sh" generate-sha256 "${FIRMWARE_PATH}"
@@ -79,6 +90,8 @@ assert_file "${FIRMWARE_PATH}/build.config"
 assert_file "${FIRMWARE_PATH}/artifact-manifest.txt"
 assert_file "${FIRMWARE_PATH}/sha256sums.txt"
 assert_file "${FIRMWARE_PATH}/package-source-manifest.tsv"
+assert_file "${FIRMWARE_PATH}/firmware-size-report.md"
+assert_file "${FIRMWARE_PATH}/build-environment-provenance.md"
 
 if find "${FIRMWARE_PATH}" -maxdepth 1 -type f \( -name "*.vmdk" -o -name "*.vdi" -o -name "*.vhd" -o -name "*.vhdx" -o -name "*.qcow2" \) -print -quit | grep -q .; then
   echo "ERROR: VM-specific disk image artifact was not pruned." >&2
@@ -86,14 +99,21 @@ if find "${FIRMWARE_PATH}" -maxdepth 1 -type f \( -name "*.vmdk" -o -name "*.vdi
 fi
 
 assert_match '^Packages\.tar\.gz$' "${FIRMWARE_PATH}/artifact-manifest.txt"
+assert_match '^firmware-size-report\.md$' "${FIRMWARE_PATH}/artifact-manifest.txt"
+assert_match '^build-environment-provenance\.md$' "${FIRMWARE_PATH}/artifact-manifest.txt"
 assert_match '^sha256sums\.txt$' "${FIRMWARE_PATH}/artifact-manifest.txt"
 assert_no_match '\.vmdk$|\.vdi$|\.vhd$|\.vhdx$|\.qcow2$' "${FIRMWARE_PATH}/artifact-manifest.txt"
-assert_no_match 'Packages\.tar\.gz|build\.config|package-source-manifest\.tsv|\.vmdk|\.vdi|\.vhd|\.vhdx|\.qcow2' "${FIRMWARE_PATH}/sha256sums.txt"
+assert_no_match 'Packages\.tar\.gz|build\.config|package-source-manifest\.tsv|firmware-size-report\.md|build-environment-provenance\.md|\.vmdk|\.vdi|\.vhd|\.vhdx|\.qcow2' "${FIRMWARE_PATH}/sha256sums.txt"
+assert_match 'Rootfs partsize.*1024 MiB' "${FIRMWARE_PATH}/firmware-size-report.md"
 assert_match '^packages/$' <(tar -tzf "${FIRMWARE_PATH}/Packages.tar.gz")
 assert_match '^packages/example\.ipk$' <(tar -tzf "${FIRMWARE_PATH}/Packages.tar.gz")
+assert_match '## Size Report' "${WORK_DIR}/release-body.md"
+assert_match 'Rootfs partsize.*1024 MiB' "${WORK_DIR}/release-body.md"
 assert_match '## Package Sources' "${WORK_DIR}/release-body.md"
 assert_match 'Openwrt-Passwall/openwrt-passwall' "${WORK_DIR}/release-body.md"
 assert_match 'feature\\\|pipe' "${WORK_DIR}/release-body.md"
+assert_match '## Build Environment' "${WORK_DIR}/release-body.md"
+assert_match 'https://example.invalid/init.sh' "${WORK_DIR}/release-body.md"
 
 mkdir -p "${OPENWRT_DIR}/package/feeds/test/failure"
 cat > "${OPENWRT_DIR}/Makefile" <<'EOF'

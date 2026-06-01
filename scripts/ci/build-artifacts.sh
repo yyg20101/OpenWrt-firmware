@@ -219,6 +219,62 @@ prune_virtual_machine_images() {
   return 0
 }
 
+extract_config_number() {
+  local config_file="$1"
+  local key="$2"
+
+  awk -F= -v key="${key}" '$1 == key { gsub(/"/, "", $2); print $2; exit }' "${config_file}" 2>/dev/null || true
+}
+
+write_size_report() {
+  local openwrt_path="$1"
+  local firmware_path="$2"
+  local config_file="${openwrt_path}/.config"
+  local report="${firmware_path}/firmware-size-report.md"
+  local rootfs_partsize
+  local kernel_partsize
+  local packages_size="0"
+  local packages_count="0"
+
+  rootfs_partsize="$(extract_config_number "${config_file}" "CONFIG_TARGET_ROOTFS_PARTSIZE")"
+  kernel_partsize="$(extract_config_number "${config_file}" "CONFIG_TARGET_KERNEL_PARTSIZE")"
+
+  if [ -d "${firmware_path}/packages" ]; then
+    packages_size="$(du -sk "${firmware_path}/packages" 2>/dev/null | awk '{print $1}' || echo 0)"
+    packages_count="$(find "${firmware_path}/packages" -type f \( -name "*.ipk" -o -name "*.apk" \) -print | wc -l | awk '{print $1}')"
+  fi
+
+  {
+    echo "# Firmware Size Report"
+    echo
+    echo "| Field | Value |"
+    echo "|-------|-------|"
+    echo "| Target directory | \`${firmware_path}\` |"
+    echo "| Rootfs partsize | \`${rootfs_partsize:-unknown} MiB\` |"
+    echo "| Kernel partsize | \`${kernel_partsize:-unknown} MiB\` |"
+    echo "| Package archive input size | \`${packages_size} KiB\` |"
+    echo "| Package archive file count | \`${packages_count}\` |"
+    echo
+    echo "## Files"
+    echo
+    echo "| File | Size | Rootfs partition share |"
+    echo "|------|------|------------------------|"
+    find "${firmware_path}" -maxdepth 1 -type f ! -name "firmware-size-report.md" -print | sort | while IFS= read -r file; do
+      local name
+      local size_bytes
+      local size_human
+      local share="n/a"
+      name="$(basename "${file}")"
+      size_bytes="$(wc -c < "${file}" | awk '{print $1}')"
+      size_human="$(du -h "${file}" | awk '{print $1}')"
+      if [[ "${rootfs_partsize:-}" =~ ^[0-9]+$ ]] && [ "${rootfs_partsize}" -gt 0 ]; then
+        share="$(awk -v bytes="${size_bytes}" -v mib="${rootfs_partsize}" 'BEGIN { printf "%.2f%%", bytes / (mib * 1024 * 1024) * 100 }')"
+      fi
+      printf '| `%s` | `%s` | `%s` |\n' "${name}" "${size_human}" "${share}"
+    done
+  } > "${report}"
+}
+
 write_artifact_manifest() {
   local firmware_path="$1"
 
@@ -254,6 +310,10 @@ organize_firmware_files() {
   if [ -f "${openwrt_path}/package-source-manifest.tsv" ]; then
     cp "${openwrt_path}/package-source-manifest.tsv" package-source-manifest.tsv
   fi
+  if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -f "${GITHUB_WORKSPACE}/build-environment-provenance.md" ]; then
+    cp "${GITHUB_WORKSPACE}/build-environment-provenance.md" build-environment-provenance.md
+  fi
+  write_size_report "${openwrt_path}" "${PWD}"
   write_artifact_manifest "${PWD}"
   rm -rf packages
   append_line "${env_target}" "FIRMWARE_PATH=${PWD}"

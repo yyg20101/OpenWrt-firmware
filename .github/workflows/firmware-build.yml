@@ -60,12 +60,27 @@ jobs:
       - name: Initialize Build Environment
         env:
           DEBIAN_FRONTEND: noninteractive
+          INIT_BUILD_ENVIRONMENT_URL: https://build-scripts.immortalwrt.org/init_build_environment.sh
         run: |
           set -euo pipefail
           source "$GITHUB_WORKSPACE/scripts/ci/retry.sh"
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android "$AGENT_TOOLSDIRECTORY" || true
           run_with_retries "apt-get update" sudo -E apt-get -qq update
-          run_with_retries "download build environment script" curl -fsSL https://build-scripts.immortalwrt.org/init_build_environment.sh -o /tmp/init_build_environment.sh
+          init_downloaded_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          run_with_retries "download build environment script" curl -fsSL "$INIT_BUILD_ENVIRONMENT_URL" -o /tmp/init_build_environment.sh
+          init_sha256="$(sha256sum /tmp/init_build_environment.sh | awk '{print $1}')"
+          {
+            echo "# Build Environment Provenance"
+            echo
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Runner OS | ${RUNNER_OS:-unknown} |"
+            echo "| Runner architecture | ${RUNNER_ARCH:-unknown} |"
+            echo "| Runner image | ${ImageOS:-unknown} ${ImageVersion:-unknown} |"
+            echo "| Init script URL | ${INIT_BUILD_ENVIRONMENT_URL} |"
+            echo "| Init script downloaded at | ${init_downloaded_at} |"
+            echo "| Init script sha256 | ${init_sha256} |"
+          } > "$GITHUB_WORKSPACE/build-environment-provenance.md"
           run_with_retries "run build environment script" sudo bash /tmp/init_build_environment.sh
           run_with_retries "apt-get install build dependencies" sudo -E apt-get -qq install \
             ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache \

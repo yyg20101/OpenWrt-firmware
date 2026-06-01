@@ -49,6 +49,8 @@ prepare_release_metadata() {
   local package_table="${workspace}/release-packages.md"
   local package_count_file="${workspace}/release-package-count.txt"
   local package_source_table="${workspace}/release-package-sources.md"
+  local size_report_section="${workspace}/release-size-report.md"
+  local build_environment_section="${workspace}/release-build-environment.md"
   local package_count="0"
 
   if [ -z "${firmware_path}" ] || [ ! -d "${firmware_path}" ]; then
@@ -77,6 +79,8 @@ prepare_release_metadata() {
   generate_package_table "${firmware_path}" "${package_table}" "${package_count_file}"
   package_count="$(cat "${package_count_file}")"
   generate_package_source_table "${firmware_path}" "${package_source_table}"
+  generate_size_report_section "${firmware_path}" "${size_report_section}"
+  generate_build_environment_section "${firmware_path}" "${build_environment_section}"
 
   cat > "${body_file}" <<EOF
 ## Firmware Build
@@ -106,6 +110,10 @@ prepare_release_metadata() {
 
 $(cat "${artifact_table}")
 
+## Size Report
+
+$(cat "${size_report_section}")
+
 ## Packages
 
 Packages.tar.gz contains ${package_count} package file(s).
@@ -120,6 +128,10 @@ $(cat "${package_table}")
 ## Package Sources
 
 $(cat "${package_source_table}")
+
+## Build Environment
+
+$(cat "${build_environment_section}")
 EOF
 
   append_github_value "${env_target}" "RELEASE_NAME" "${release_name}"
@@ -128,6 +140,32 @@ EOF
   append_github_value "${output_target}" "release_name" "${release_name}"
   append_github_value "${output_target}" "release_tag" "${release_tag}"
   append_github_value "${output_target}" "release_body_file" "${body_file}"
+}
+
+generate_size_report_section() {
+  local firmware_path="$1"
+  local section_file="$2"
+  local report="${firmware_path}/firmware-size-report.md"
+
+  if [ ! -f "${report}" ]; then
+    echo "_No firmware size report found._" > "${section_file}"
+    return
+  fi
+
+  sed -n '3,$p' "${report}" > "${section_file}"
+}
+
+generate_build_environment_section() {
+  local firmware_path="$1"
+  local section_file="$2"
+  local report="${firmware_path}/build-environment-provenance.md"
+
+  if [ ! -f "${report}" ]; then
+    echo "_No build environment provenance found._" > "${section_file}"
+    return
+  fi
+
+  cat "${report}" > "${section_file}"
 }
 
 generate_package_source_table() {

@@ -14,6 +14,50 @@ resolve_path() {
   fi
 }
 
+portable_sha256_file() {
+  local path="$1"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "${path}" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "${path}" | awk '{print $1}'
+  else
+    printf 'unknown\n'
+  fi
+}
+
+workspace_git_value() {
+  local workspace="$1"
+  shift
+
+  git -C "${workspace}" "$@" 2>/dev/null || printf 'unknown\n'
+}
+
+record_local_package_source() {
+  local openwrt_path="$1"
+  local workspace="$2"
+  local label="$3"
+  local script_ref="$4"
+  local script_path="$5"
+  local manifest="${openwrt_path}/package-source-manifest.tsv"
+  local branch
+  local commit
+  local sha256
+
+  [ -f "${script_path}" ] || return 0
+
+  if [ ! -f "${manifest}" ]; then
+    printf 'package\trepository\tref\tcommit\tmode\n' > "${manifest}"
+  fi
+
+  branch="$(workspace_git_value "${workspace}" rev-parse --abbrev-ref HEAD)"
+  commit="$(workspace_git_value "${workspace}" rev-parse HEAD)"
+  sha256="$(portable_sha256_file "${script_path}")"
+
+  printf '%s\tlocal:%s\t%s\t%s\tlocal-script;sha256=%s\n' \
+    "${label}" "${script_ref}" "${branch}" "${commit}" "${sha256}" >> "${manifest}"
+}
+
 load_base_config() {
   local openwrt_path="$1"
   local config_file="$2"
@@ -143,6 +187,8 @@ apply_package_overrides() {
     echo "PACKAGE_BASE_SCRIPT_PATH missing (${package_base_script_path}), skip."
     return
   fi
+  record_local_package_source "${openwrt_path}" "${workspace}" "package-base-script" "${package_base_script_path}" "${package_base_script}"
+  record_local_package_source "${openwrt_path}" "${workspace}" "package-overlay-script" "${package_file}" "${package_file_path}"
   cp "${package_base_script}" "${tmp_packages_sh}"
   echo "" >> "${tmp_packages_sh}"
   cat "${package_file_path}" >> "${tmp_packages_sh}"
