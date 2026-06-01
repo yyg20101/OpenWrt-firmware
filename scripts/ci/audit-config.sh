@@ -101,9 +101,6 @@ if [ "$(config_value CONFIG_TARGET_x86_64)" = "y" ]; then
   require_value CONFIG_PACKAGE_kmod-ixgbe y
   require_value CONFIG_PACKAGE_kmod-r8125 y
   require_value CONFIG_PACKAGE_kmod-r8169 y
-  require_value CONFIG_PACKAGE_kmod-virtio-net y
-  require_value CONFIG_PACKAGE_kmod-virtio-pci y
-  require_value CONFIG_PACKAGE_kmod-virtio-random y
   require_value CONFIG_PACKAGE_kmod-ata-ahci y
   require_value CONFIG_PACKAGE_kmod-nvme y
   forbidden_enabled CONFIG_VMDK_IMAGES

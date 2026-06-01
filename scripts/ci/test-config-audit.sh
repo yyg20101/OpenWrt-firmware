@@ -53,9 +53,6 @@ CONFIG_PACKAGE_kmod-igc=y
 CONFIG_PACKAGE_kmod-ixgbe=y
 CONFIG_PACKAGE_kmod-r8125=y
 CONFIG_PACKAGE_kmod-r8169=y
-CONFIG_PACKAGE_kmod-virtio-net=y
-CONFIG_PACKAGE_kmod-virtio-pci=y
-CONFIG_PACKAGE_kmod-virtio-random=y
 CONFIG_PACKAGE_kmod-ata-ahci=y
 CONFIG_PACKAGE_kmod-nvme=y
 CONFIG_PACKAGE_luci-app-samba4=y
@@ -142,8 +139,6 @@ expect_fail_without "CONFIG_PACKAGE_rpcd-mod-luci" "requires CONFIG_PACKAGE_rpcd
 expect_fail_without "CONFIG_PACKAGE_luci-app-irqbalance" "requires CONFIG_PACKAGE_luci-app-irqbalance=y"
 expect_fail_without "CONFIG_PACKAGE_intel-microcode" "requires CONFIG_PACKAGE_intel-microcode=y"
 expect_fail_without "CONFIG_PACKAGE_kmod-e1000e" "requires CONFIG_PACKAGE_kmod-e1000e=y"
-expect_fail_without "CONFIG_PACKAGE_kmod-virtio-net" "requires CONFIG_PACKAGE_kmod-virtio-net=y"
-expect_fail_without "CONFIG_PACKAGE_kmod-virtio-random" "requires CONFIG_PACKAGE_kmod-virtio-random=y"
 expect_fail_without "CONFIG_PACKAGE_kmod-nvme" "requires CONFIG_PACKAGE_kmod-nvme=y"
 expect_fail_without_theme
 expect_fail_without_performance_overlay
