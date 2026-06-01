@@ -67,7 +67,7 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 | TASK-008 | Tune `make_compile_jobs` per profile in `devices/profiles.yml` and keep fallback compilation behavior in `scripts/ci/build-artifacts.sh` so memory-sensitive sources can retry with safer parallelism. | ✅ | 2026-06-01 |
 | TASK-009 | Preserve layered config fragments in `scripts/common/config/*.config` and `devices/profiles.yml` so required plugins and performance capabilities remain traceable to specific fragments. | ✅ | 2026-06-01 |
 | TASK-010 | Keep cache maintenance reviewable through `.github/workflows/cache-maintenance.yml` and `scripts/ci/validate-cache-maintenance.sh`, with real deletion blocked unless a `prefix` or `ref` filter is supplied. | ✅ | 2026-06-01 |
-| TASK-011 | Fix `.github/workflows/cache-maintenance.yml` so a dry run with `ref=refs/heads/main`, `older_than_days=0`, and `keep_latest=1` discovers current main-branch caches through the Actions cache API and reports four previous-week cleanup candidates. |  |  |
+| TASK-011 | Fix `.github/workflows/cache-maintenance.yml` so a dry run with `ref=refs/heads/main`, `older_than_days=0`, and `keep_latest=1` discovers current main-branch caches through the Actions cache API and reports four previous-week cleanup candidates. | ✅ | 2026-06-01 |
 
 ### Implementation Phase 3
 
@@ -100,7 +100,7 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 |------|-------------|-----------|------|
 | TASK-021 | Re-run `Optimization Health` on branch `codex-openwrt-optimization-execution` and record the successful run URL and commit SHA in the evidence section of this plan. | ✅ | 2026-06-01 |
 | TASK-022 | Re-run `Firmware CI` with `target=x86_64_all` on branch `codex-openwrt-optimization-execution` after the gzip warning fix and confirm both `x86_64_LEDE` and `x86_64_immortalWrt` produce firmware, config audit, compile log, and smoke artifacts. |  |  |
-| TASK-023 | Re-run `Cache Maintenance` dry-run with `dry_run=true`, `older_than_days=0`, `keep_latest=1`, and `ref=refs/heads/main`; confirm it reports eight matched caches, four cache groups, and four cleanup candidates for the previous week. |  |  |
+| TASK-023 | Re-run `Cache Maintenance` dry-run with `dry_run=true`, `older_than_days=0`, `keep_latest=1`, and `ref=refs/heads/main`; confirm it reports eight matched caches, four cache groups, and four cleanup candidates for the previous week. | ✅ | 2026-06-01 |
 | TASK-024 | After TASK-022 and TASK-023 pass, update this plan to `Completed`, commit the plan update, and only then consider merging this branch into `main`. |  |  |
 
 ## 3. Alternatives
@@ -218,3 +218,4 @@ The current baseline already includes profile drift reporting, x86 smoke validat
 | Live cache inventory from `scripts/ci/optimization-report.sh cache yyg20101/OpenWrt-firmware` | Reported eight caches on `refs/heads/main`, about `5095.58 MiB` total, with four previous-week caches expected as cleanup candidates when `keep_latest=1`. | 2026-06-01 |
 | Direct GitHub cache API check | `GET /repos/yyg20101/OpenWrt-firmware/actions/caches?ref=refs/heads/main` returned eight caches; `ref=main` returned zero, confirming the maintenance workflow must preserve the full ref string. | 2026-06-01 |
 | Cache maintenance workflow local validation | `.github/workflows/cache-maintenance.yml` now uses explicit REST pagination through `github.request("GET /repos/{owner}/{repo}/actions/caches", ...)`; `scripts/ci/validate-cache-maintenance.sh` prevents returning to `getActionsCacheList`. | 2026-06-01 |
+| Cache maintenance dry-run `26762407724` | Successful on commit `8092f61`; log reported `Matched caches: 8`, `Matched cache groups: 4`, `Cleanup candidates: 4`, and listed only `Would delete` entries for the four `2026-21` caches. | 2026-06-01 |
