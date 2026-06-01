@@ -38,6 +38,8 @@ fail!("real deletion must require prefix or ref") unless body.include?("!dryRun 
 fail!("cache cleanup must use deleteActionsCacheById") unless body.include?("deleteActionsCacheById")
 fail!("workflow_dispatch inputs must be forwarded to github-script env") unless body.include?("OLDER_THAN_DAYS: ${{ inputs.older_than_days }}")
 fail!("dry_run must be parsed from forwarded env") unless body.include?("process.env.DRY_RUN")
+fail!("cache cleanup must keep latest entries per cache group") unless body.include?("cacheGroupKey") && body.include?("groupCounts")
+fail!("cache cleanup must not use global matched.slice retention") if body.include?("matched.slice(0, keepLatest)")
 
 puts "Cache Maintenance workflow guard passed."
 RUBY

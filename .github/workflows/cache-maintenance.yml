@@ -73,6 +73,16 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const matched = [];
+            const cacheGroupKey = (key) => {
+              const parts = key.split("-");
+              if (parts[0] === "ccache" && parts[1] === "v2" && parts.length >= 6) {
+                return parts.slice(0, 5).join("-");
+              }
+              if (parts[0] === "build" && parts[1] === "accel" && parts[2] === "v2" && parts.length >= 7) {
+                return parts.slice(0, 6).join("-");
+              }
+              return key;
+            };
 
             for await (const response of github.paginate.iterator(github.rest.actions.getActionsCacheList, {
               owner,
@@ -86,8 +96,16 @@ jobs:
               }
             }
 
-            matched.sort((a, b) => new Date(b.last_accessed_at) - new Date(a.last_accessed_at));
-            const protectedCaches = new Set(matched.slice(0, keepLatest).map((cache) => cache.id));
+            const protectedCaches = new Set();
+            const groupCounts = new Map();
+            for (const cache of matched.sort((a, b) => new Date(b.last_accessed_at) - new Date(a.last_accessed_at))) {
+              const group = cacheGroupKey(cache.key);
+              const count = groupCounts.get(group) || 0;
+              if (count < keepLatest) {
+                protectedCaches.add(cache.id);
+              }
+              groupCounts.set(group, count + 1);
+            }
             const candidates = [];
             for (const cache of matched) {
               if (protectedCaches.has(cache.id)) continue;
@@ -102,8 +120,9 @@ jobs:
             core.summary.addRaw(`Prefix: ${prefix || "(any)"}\n\n`);
             core.summary.addRaw(`Ref: ${ref || "(any)"}\n\n`);
             core.summary.addRaw(`Older than days: ${olderThanDays}\n\n`);
-            core.summary.addRaw(`Keep latest: ${keepLatest}\n\n`);
+            core.summary.addRaw(`Keep latest per group: ${keepLatest}\n\n`);
             core.summary.addRaw(`Matched caches before retention: ${matched.length}\n\n`);
+            core.summary.addRaw(`Matched cache groups: ${groupCounts.size}\n\n`);
 
             if (candidates.length === 0) {
               core.summary.addRaw("No caches matched.\n");
