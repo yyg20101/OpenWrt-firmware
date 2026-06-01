@@ -84,11 +84,16 @@ jobs:
               return key;
             };
 
-            for await (const response of github.paginate.iterator(github.rest.actions.getActionsCacheList, {
+            const listRequest = {
               owner,
               repo,
               per_page: 100,
-            })) {
+            };
+            if (ref) {
+              listRequest.ref = ref;
+            }
+
+            for await (const response of github.paginate.iterator(github.rest.actions.getActionsCacheList, listRequest)) {
               for (const cache of response.data.actions_caches ?? []) {
                 if (prefix && !cache.key.startsWith(prefix)) continue;
                 if (ref && cache.ref !== ref) continue;
