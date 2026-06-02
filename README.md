@@ -23,7 +23,7 @@
 
 - `CI Lint`
   - 文件：`.github/workflows/ci-lint.yml`
-  - 校验 workflow YAML、shell 语法、固件 profile、Dependabot 覆盖。
+  - 校验 workflow YAML、shell 语法、固件 profile、Dependabot 覆盖、Cache Key 策略。
 
 ## Device Profiles
 
@@ -92,8 +92,15 @@ ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_fil
 find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
+bash scripts/ci/validate-cache-key-policy.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 ```
+
+## Cache Strategy
+
+`Firmware Build` 使用两类缓存：`ccache` 和 build accelerator。Cache Key 保持按 cache 类型、版本、source slug、source branch、`cache_group` 隔离，并使用月度 `CACHE_PERIOD` 作为刷新周期，避免周序变化造成过多重复缓存。
+
+Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 `cache-matched-key` 为空时执行。也就是说，命中 exact key 或 fallback key 都不会再保存新的重复缓存。Cache 接近容量上限时，先运行 `Cache Maintenance` dry-run；真实删除仍必须指定 `prefix` 或 `ref`。
 
 ## Operations Order
 

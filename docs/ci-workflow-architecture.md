@@ -28,6 +28,7 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Validates shell syntax.
   - Validates `devices/profiles.yml`.
   - Validates Dependabot ecosystem coverage.
+  - Validates cache key period and save policy.
   - Validates optimization health summary generation.
 
 - `.github/workflows/optimization-health.yml`
@@ -45,6 +46,12 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Manually lists or deletes old GitHub Releases by tag prefix.
   - Defaults to dry-run and keeps the newest matched releases.
   - Allows broad `firmware-` dry-runs, but requires a profile-specific tag prefix for real deletions.
+
+## Cache Strategy
+
+`firmware-build.yml` restores two cache families: `ccache-v2` and `build-accel-v2`. Primary keys are grouped by cache type, version, source repository slug, source branch, profile `cache_group`, and monthly cache period. Restore keys intentionally stop at the source/branch/group prefix so a previous period can accelerate the build without crossing toolchain boundaries.
+
+Cache save is stricter than exact-hit detection: save steps run only when `cache-matched-key` is empty. Exact hits and fallback hits both skip saving, which prevents a restored previous-period cache from creating a redundant new period cache on every calendar rollover.
 
 ## Profile Contract
 
@@ -192,6 +199,7 @@ Recommended operating order:
 - Keep long shell logic in `scripts/ci/*.sh`, not workflow YAML.
 - Preserve profile output names when refactoring cache, artifact, or Release behavior.
 - Keep cache deletion workflows filtered by `prefix` or `ref`; dry-run is the only broad mode.
+- Keep cache keys isolated by source slug, source branch, and `cache_group`; save only when no matched cache key exists.
 - Treat `x86_64_all` as the preferred preflight target for build and smoke validation before broader profile groups.
 - Run local validation before pushing:
 
@@ -200,6 +208,7 @@ ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_fil
 find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
+bash scripts/ci/validate-cache-key-policy.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/optimization-report.sh summary "$PWD"
 ```

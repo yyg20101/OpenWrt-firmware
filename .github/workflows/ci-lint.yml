@@ -60,6 +60,11 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-cache-maintenance.sh
 
+      - name: Validate Cache Key Policy / 校验缓存 Key 策略
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-cache-key-policy.sh
+
       - name: Validate Release Maintenance / 校验发布清理保护
         run: |
           set -euo pipefail

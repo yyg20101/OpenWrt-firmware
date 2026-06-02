@@ -117,7 +117,7 @@ jobs:
           source_commit="$(git rev-parse HEAD)"
           source_commit_date="$(git show -s --date=iso-strict --format='%cd' HEAD)"
           source_commit_subject="$(git show -s --format='%s' HEAD)"
-          cache_week="$(date +%Y-%W)"
+          cache_period="$(date +%Y-%m)"
           append_github_value() {
             local target="$1"
             local key="$2"
@@ -134,20 +134,20 @@ jobs:
           append_github_value "$GITHUB_ENV" "SOURCE_COMMIT" "${source_commit}"
           append_github_value "$GITHUB_ENV" "SOURCE_COMMIT_DATE" "${source_commit_date}"
           append_github_value "$GITHUB_ENV" "SOURCE_COMMIT_SUBJECT" "${source_commit_subject}"
-          append_github_value "$GITHUB_ENV" "CACHE_WEEK" "${cache_week}"
+          append_github_value "$GITHUB_ENV" "CACHE_PERIOD" "${cache_period}"
           append_github_value "$GITHUB_OUTPUT" "openwrt_path" "$PWD"
           append_github_value "$GITHUB_OUTPUT" "wrt_hash" "${wrt_hash}"
           append_github_value "$GITHUB_OUTPUT" "source_commit" "${source_commit}"
           append_github_value "$GITHUB_OUTPUT" "source_commit_date" "${source_commit_date}"
           append_github_value "$GITHUB_OUTPUT" "source_commit_subject" "${source_commit_subject}"
-          append_github_value "$GITHUB_OUTPUT" "cache_week" "${cache_week}"
+          append_github_value "$GITHUB_OUTPUT" "cache_period" "${cache_period}"
 
       - name: Restore ccache
         id: cache-ccache
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
-          key: ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
+          key: ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_period }}
           restore-keys: |
             ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
@@ -159,13 +159,15 @@ jobs:
             ${{ env.OPENWRT_DIR }}/staging_dir/host
             ${{ env.OPENWRT_DIR }}/staging_dir/hostpkg
             ${{ env.OPENWRT_DIR }}/staging_dir/toolchain-*
-          key: build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_week }}
+          key: build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_period }}
           restore-keys: |
             build-accel-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-
 
       - name: Show Cache Status
         run: |
           set -euo pipefail
+          echo "cache period: ${{ steps.source.outputs.cache_period }}"
+          echo "cache save policy: save only when no matched cache key exists"
           echo "ccache exact hit: ${{ steps.cache-ccache.outputs.cache-hit }}"
           echo "ccache matched key: ${{ steps.cache-ccache.outputs.cache-matched-key }}"
           echo "build accelerator exact hit: ${{ steps.cache-build-accel.outputs.cache-hit }}"
@@ -219,14 +221,14 @@ jobs:
           bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" compile-firmware "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GITHUB_OUTPUT" "$GITHUB_ENV"
 
       - name: Save ccache
-        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-hit != 'true'
+        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-matched-key == ''
         uses: actions/cache/save@v5
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
           key: ${{ steps.cache-ccache.outputs.cache-primary-key }}
 
       - name: Save Build Accelerator Cache
-        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-hit != 'true'
+        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-matched-key == ''
         uses: actions/cache/save@v5
         with:
           path: |

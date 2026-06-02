@@ -38,9 +38,9 @@ case "$*" in
     ;;
   *"actions/caches"*)
     printf '%s\t%s\t%s\t%s\n' \
-      "ccache-v2-coolsnowwolf_lede-master-x86_64-2026-22" "refs/heads/main" "1048576" "2026-06-01T00:00:00Z" \
-      "ccache-v2-immortalwrt_immortalwrt-master-x86_64-2026-22" "refs/heads/main" "2097152" "2026-06-01T01:00:00Z" \
-      "build-accel-v2-coolsnowwolf_lede-master-x86_64-2026-22" "refs/heads/main" "3145728" "2026-06-01T02:00:00Z"
+      "ccache-v2-coolsnowwolf_lede-master-x86_64-2026-06" "refs/heads/main" "1048576" "2026-06-01T00:00:00Z" \
+      "ccache-v2-immortalwrt_immortalwrt-master-x86_64-2026-06" "refs/heads/main" "2097152" "2026-06-01T01:00:00Z" \
+      "build-accel-v2-coolsnowwolf_lede-master-x86_64-2026-06" "refs/heads/main" "3145728" "2026-06-01T02:00:00Z"
     ;;
   *"repos/owner/repo/releases"*)
     printf '%s\n' \
