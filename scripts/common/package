@@ -1,4 +1,6 @@
-if [ "${SOURCE_REPO:-}" = "lede" ]; then
+case "${SOURCE_REPO:-}" in
+  lede|immortalwrt|openwrt-6.x)
   UPDATE_PACKAGE "passwall-packages" "Openwrt-Passwall/openwrt-passwall-packages" "main" "all" "chinadns-ng dns2socks geoview hysteria ipt2socks microsocks naiveproxy shadow-tls shadowsocks-libev shadowsocks-rust shadowsocksr-libev simple-obfs sing-box tcping trojan-plus tuic-client v2ray-geodata v2ray-plugin xray-core xray-plugin"
-  UPDATE_PACKAGE "passwall" "Openwrt-Passwall/openwrt-passwall" "main" "pkg" "luci-app-passwall"
-fi
+  UPDATE_PACKAGE_LATEST_TAG "passwall" "Openwrt-Passwall/openwrt-passwall" "main" "pkg" "luci-app-passwall"
+  ;;
+esac

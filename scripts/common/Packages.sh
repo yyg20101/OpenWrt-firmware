@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-AUTO_LATEST_TAG="${AUTO_LATEST_TAG:-true}"
+AUTO_LATEST_TAG="${AUTO_LATEST_TAG:-false}"
 LATEST_TAG_EXCLUDE_PATTERN="${LATEST_TAG_EXCLUDE_PATTERN:-smartdns}"
 ALLOWED_CLEAN_ROOTS=(./ ../feeds/luci/ ../feeds/packages/)
 
@@ -141,6 +141,7 @@ UPDATE_PACKAGE() {
   local pkg_branch="$3"
   local pkg_special="${4:-}"
   local custom_aliases="${5:-}"
+  local tag_policy="${6:-}"
 
   require_cmds git find awk grep cut tail rm cp mv dirname tr mktemp
 
@@ -180,10 +181,23 @@ UPDATE_PACKAGE() {
     done < <(find ./ ../feeds/luci/ ../feeds/packages/ -mindepth 1 -maxdepth 3 -type d -iname "$name" -print0 2>/dev/null || true)
   done
 
+  if [ -z "${tag_policy}" ]; then
+    if [ "${AUTO_LATEST_TAG}" = "true" ]; then
+      tag_policy="latest-optional"
+    else
+      tag_policy="branch"
+    fi
+  fi
+
+  if [[ ! "${tag_policy}" =~ ^(branch|latest-optional|latest-required)$ ]]; then
+    echo "ERROR: invalid tag policy for ${pkg_name}: ${tag_policy}" >&2
+    return 1
+  fi
+
   # pick latest stable-ish tag (excluding smartdns tags), fallback to branch
-  # 选取最新 tag（排除 smartdns），失败则回退到 branch
+  # 选取最新 tag（排除 smartdns），失败则按策略回退或失败
   local latest_tag=""
-  if [ "$AUTO_LATEST_TAG" = "true" ]; then
+  if [ "${tag_policy}" != "branch" ]; then
     latest_tag="$(run_capture_with_retries "list tags for $pkg_repo" git ls-remote --tags --refs --sort='v:refname' "https://github.com/$pkg_repo.git" \
       | awk -F'/' '{print $3}' \
       | grep -Ev "${LATEST_TAG_EXCLUDE_PATTERN}" \
@@ -194,6 +208,9 @@ UPDATE_PACKAGE() {
   if [ -n "$latest_tag" ]; then
     branch_or_tag="$latest_tag"
     echo "Using latest tag: $branch_or_tag"
+  elif [ "${tag_policy}" = "latest-required" ]; then
+    echo "ERROR: ${pkg_name} requires a latest tag from ${pkg_repo}, but no suitable tag was found." >&2
+    return 1
   else
     echo "No suitable tag found (or AUTO_LATEST_TAG disabled), fallback ref: $branch_or_tag"
   fi
@@ -246,6 +263,10 @@ UPDATE_PACKAGE() {
     [ -e "$pkg_name" ] && rm -rf "$pkg_name"
     mv -f "$repo_name" "$pkg_name"
   fi
+}
+
+UPDATE_PACKAGE_LATEST_TAG() {
+  UPDATE_PACKAGE "$1" "$2" "$3" "${4:-}" "${5:-}" "latest-required"
 }
 
 # update package version by GitHub release metadata
@@ -306,4 +327,5 @@ UPDATE_VERSION() {
 # UPDATE_PACKAGE "OpenAppFilter" "destan19/OpenAppFilter" "master" "" "custom_name1 custom_name2"
 # UPDATE_PACKAGE "open-app-filter" "destan19/OpenAppFilter" "master" "" "luci-app-appfilter oaf"
 # UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg/name/all，可选"
+# UPDATE_PACKAGE_LATEST_TAG "包名" "项目地址" "回退分支" "pkg/name/all，可选"
 # UPDATE_VERSION "sing-box"

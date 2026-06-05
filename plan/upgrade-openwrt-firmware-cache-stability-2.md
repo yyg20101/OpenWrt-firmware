@@ -2,7 +2,7 @@
 goal: OpenWrt firmware cache reuse, build performance, and stability hardening
 version: 2.0
 date_created: 2026-06-02
-last_updated: 2026-06-03
+last_updated: 2026-06-06
 owner: wajie
 status: In progress
 tags:
@@ -36,6 +36,10 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 - **REQ-009**: Failed builds must continue to upload compile logs and failure-context artifacts with failed package hints, disk state, memory state, ccache state, and OpenWrt target metadata.
 - **REQ-010**: The implementation branch may be merged into `main` only after local validators pass, x86 GitHub Actions evidence is recorded, and cache maintenance dry-run behavior is verified.
 - **REQ-011**: After a successful merge to `main`, obsolete local and remote implementation branches must be deleted and the final branch state must be audited.
+- **REQ-012**: Current profiles must preserve upstream `feeds.conf.default` and use the official LuCI feed declared by each source tree unless a future profile explicitly documents a local feeds override.
+- **REQ-013**: LuCI Simplified Chinese support must use the official LuCI language option and feed-provided i18n package defaults. Do not hard-code per-plugin translation packages in local config.
+- **REQ-014**: LuCI theme, uHTTPd, and rpcd defaults should come from the official LuCI collection dependencies and package post-install behavior, with local audit verifying the defconfig result instead of replacing those defaults.
+- **REQ-015**: PassWall must clean local/feed conflicts and pull `Openwrt-Passwall/openwrt-passwall` from the latest upstream tag for supported source trees.
 - **SEC-001**: Workflow changes must not add new secrets, broaden token permissions beyond the existing need, or hide remote script and package overlay provenance.
 - **CON-001**: Changes must stay compatible with the existing workflow split: `.github/workflows/firmware-ci.yml`, `.github/workflows/firmware-build.yml`, `.github/workflows/optimization-health.yml`, `.github/workflows/cache-maintenance.yml`, `.github/workflows/release-maintenance.yml`, and `.github/workflows/ci-lint.yml`.
 - **CON-002**: `devices/profiles.yml` remains the single source of truth for profile matrix membership, source repository, source branch, config path, cache group, compile limits, and config fragments.
@@ -43,6 +47,7 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 - **CON-004**: Live cache deletion is outside this implementation unless the user explicitly approves a deletion operation after reviewing dry-run output.
 - **GUD-001**: Keep OpenWrt configuration split into base, network performance, storage, USB/mobile, proxy, Samba, x86, x86 performance, and platform-specific fragments.
 - **GUD-002**: Prefer workflow policy validation in `scripts/ci/` so cache behavior regressions are caught by `ci-lint.yml`.
+- **GUD-003**: Prefer upstream OpenWrt/ImmortalWrt/LuCI defaults when they already provide the needed behavior; add local config only to select required capabilities or audit their expanded results.
 - **PAT-001**: Use explicit local validators before triggering expensive firmware builds.
 - **PAT-002**: Record run IDs, commit SHAs, artifact checks, and cache dry-run results in this plan before marking it `Completed`.
 
@@ -94,6 +99,21 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 | TASK-017 | Run `bash scripts/ci/validate-cache-maintenance.sh` and confirm cache cleanup still requires dry-run review and explicit deletion boundaries. | ✅ | 2026-06-03 |
 | TASK-018 | Run `bash scripts/ci/test-optimization-report.sh` and confirm cache prefix grouping still works with monthly cache period suffixes. | ✅ | 2026-06-03 |
 | TASK-019 | Run workflow and shell syntax validators: `ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"` and `find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n`. | ✅ | 2026-06-03 |
+
+### Implementation Phase 4B
+
+- GOAL-004B: Keep LuCI, feeds, uHTTPd, theme, and PassWall behavior aligned with official upstream defaults.
+
+| Task | Description | Completed | Date |
+|------|-------------|-----------|------|
+| TASK-019A | Inspect upstream `feeds.conf.default` for `coolsnowwolf/lede`, `immortalwrt/immortalwrt`, `VIKINGYFY/immortalwrt`, and `LiBwrt/openwrt-6.x`; confirm all declare an official LuCI feed and current profiles do not set local `feeds_conf` overrides. | ✅ | 2026-06-06 |
+| TASK-019B | Inspect upstream LuCI `luci.mk` and `/etc/config/luci` defaults for active LuCI feeds; confirm `CONFIG_LUCI_LANG_zh_Hans` maps to `zh-cn` translation packages while default runtime language remains `auto`. | ✅ | 2026-06-06 |
+| TASK-019C | Inspect ImmortalWrt LuCI default theme and uHTTPd/rpcd chain; confirm `luci` depends on `luci-light`, `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`, and `luci-base` depends on rpcd modules and adds the uHTTPd LuCI ucode handler. | ✅ | 2026-06-06 |
+| TASK-019D | Add the minimal `scripts/common/config/luci-zh-cn.config` fragment with only `CONFIG_LUCI_LANG_zh_Hans=y`, attach it to enabled profiles, and keep plugin translations governed by LuCI feed defaults. | ✅ | 2026-06-06 |
+| TASK-019E | Extend config audit and fixtures to require `CONFIG_LUCI_LANG_zh_Hans=y` and defconfig-expanded `CONFIG_PACKAGE_luci-i18n-base-zh-cn=y`, proving the official LuCI i18n mechanism is active without hard-coded per-plugin i18n config. | ✅ | 2026-06-06 |
+| TASK-019F | Update PassWall overlay logic so supported source trees clean conflicting PassWall directories, refresh `Openwrt-Passwall/openwrt-passwall-packages` from `main`, and pull `Openwrt-Passwall/openwrt-passwall` with latest-tag-required policy. | ✅ | 2026-06-06 |
+| TASK-019G | Add `validate-luci-zh-cn-config.sh` and `validate-passwall-overlay.sh` to `ci-lint.yml` so future edits cannot reintroduce local feeds overrides, hard-coded per-plugin LuCI i18n packages, or non-tag PassWall main app overlays. | ✅ | 2026-06-06 |
+| TASK-019H | Remove local hard-coded LuCI runtime/library package selections from `base.config`; keep `CONFIG_PACKAGE_luci=y` as the official collection selector and let config audit verify the defconfig-expanded LuCI/uHTTPd/rpcd result. | ✅ | 2026-06-06 |
 
 ### Implementation Phase 5
 
@@ -176,6 +196,9 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 - **FILE-019**: `docs/openwrt-firmware-performance-stability-plan.md` documents the human-readable optimization roadmap.
 - **FILE-020**: `docs/ci-workflow-architecture.md` documents workflow responsibilities and operating order.
 - **FILE-021**: `README.md` documents user-facing build, validation, and cache maintenance operations.
+- **FILE-022**: `scripts/common/config/luci-zh-cn.config` selects the official LuCI Simplified Chinese language option.
+- **FILE-023**: `scripts/ci/validate-luci-zh-cn-config.sh` validates LuCI language policy and absence of local feeds overrides.
+- **FILE-024**: `scripts/ci/validate-passwall-overlay.sh` validates PassWall latest-tag overlay policy.
 
 ## 6. Testing
 
@@ -191,6 +214,8 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 - **TEST-010**: Run `bash scripts/ci/validate-dependabot-coverage.sh`; expect dependency update coverage to pass.
 - **TEST-011**: Run `ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"`; expect all workflow YAML files to parse.
 - **TEST-012**: Run `find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n`; expect all shell scripts to pass syntax validation.
+- **TEST-012A**: Run `bash scripts/ci/validate-luci-zh-cn-config.sh`; expect enabled profiles to include the shared LuCI language fragment, avoid `feeds_conf` overrides, and avoid hard-coded per-plugin i18n packages in the fragment.
+- **TEST-012B**: Run `bash scripts/ci/validate-passwall-overlay.sh`; expect PassWall main app to use latest-tag-required overlay and dependency packages to use the official dependency repository.
 - **TEST-013**: Run `bash scripts/ci/optimization-report.sh cache yyg20101/OpenWrt-firmware`; expect live cache inventory, refs, prefix groups, sizes, and last-access timestamps to render.
 - **TEST-014**: Trigger `Optimization Health` on branch `codex/cache-stability-optimization`; expect the workflow conclusion to be `success`.
 - **TEST-015**: Trigger `Firmware CI` with `target=x86_64_all`, `release=false`, and `make_latest=false` on branch `codex/cache-stability-optimization`; expect both x86 jobs to conclude `success`.
@@ -213,6 +238,8 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 - **ASSUMPTION-004**: `devices/profiles.yml` remains the only matrix source used by workflows and validators.
 - **ASSUMPTION-005**: `ubuntu-22.04` GitHub-hosted runners remain available for the current OpenWrt build toolchain.
 - **ASSUMPTION-006**: The user will approve any real cache deletion separately after reviewing dry-run results.
+- **ASSUMPTION-007**: The active LuCI feeds keep the observed `zh_Hans` language symbol and `zh-cn` i18n package alias behavior.
+- **ASSUMPTION-008**: `Openwrt-Passwall/openwrt-passwall-packages` does not provide a coherent whole-repository release tag; using `main` for dependency packages is safer than forcing package-specific tags such as `dns2socks`.
 
 ## 8. Related Specifications / Further Reading
 
@@ -244,6 +271,12 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 | Previous cache dry-run baseline | Cache Maintenance run `26762407724` matched eight `refs/heads/main` caches, four cache groups, and four previous-week cleanup candidates without deleting caches. | 2026-06-02 |
 | Cache policy implementation | `.github/workflows/firmware-build.yml` now uses monthly `CACHE_PERIOD`, primary keys with `steps.source.outputs.cache_period`, and save conditions based on empty `cache-matched-key`; `scripts/ci/validate-cache-key-policy.sh` validates the policy through `ci-lint.yml`. | 2026-06-03 |
 | Local validation set | Passed `validate-cache-key-policy.sh`, workflow YAML parsing, shell syntax, `validate-profiles.sh`, `test-config-audit.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `test-config-feeds.sh`, `validate-release-maintenance.sh`, `validate-dependabot-coverage.sh`, and `optimization-report.sh summary`. | 2026-06-03 |
+| Upstream feeds audit | `coolsnowwolf/lede` declares `src-git luci https://github.com/coolsnowwolf/luci.git;openwrt-25.12`; `immortalwrt/immortalwrt`, `VIKINGYFY/immortalwrt`, and `LiBwrt/openwrt-6.x` declare `src-git luci https://github.com/immortalwrt/luci.git`; current `devices/profiles.yml` has no `feeds_conf` overrides. | 2026-06-06 |
+| Upstream LuCI language audit | Active upstream LuCI `luci.mk` defines `LUCI_LANG.zh_Hans`, maps `zh_Hans` to `zh-cn` translation package names, and sets i18n package defaults from the language option; upstream `/etc/config/luci` keeps `option lang auto`. | 2026-06-06 |
+| Upstream LuCI theme/uHTTPd audit | ImmortalWrt `luci` depends on `luci-light`; `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`; the Bootstrap theme sets `main.mediaurlbase` through its own uci-defaults, and `luci-base` depends on rpcd modules and adds the uHTTPd LuCI ucode handler in postinst. | 2026-06-06 |
+| LuCI Chinese implementation | Added `scripts/common/config/luci-zh-cn.config` with only `CONFIG_LUCI_LANG_zh_Hans=y`, attached it to all enabled profiles, removed hard-coded LuCI runtime/library selections from `base.config`, and audited defconfig output for `CONFIG_PACKAGE_luci-base=y` and `CONFIG_PACKAGE_luci-i18n-base-zh-cn=y` without hard-coding per-plugin i18n packages. | 2026-06-06 |
+| PassWall overlay implementation | `scripts/common/package` now applies PassWall overlay to LEDE and ImmortalWrt-family source trees; dependency packages use `Openwrt-Passwall/openwrt-passwall-packages` `main`, while `luci-app-passwall` uses `UPDATE_PACKAGE_LATEST_TAG` against `Openwrt-Passwall/openwrt-passwall`. Latest observed app tag: `26.6.2-1`. | 2026-06-06 |
+| Local validation set after LuCI/PassWall changes | Passed after removing local LuCI runtime/library hard-coding: `validate-cache-key-policy.sh`, `validate-luci-zh-cn-config.sh`, `validate-passwall-overlay.sh`, `validate-profiles.sh`, `test-config-audit.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `test-config-feeds.sh`, workflow YAML parsing, shell syntax, `validate-release-maintenance.sh`, `validate-dependabot-coverage.sh`, `optimization-report.sh summary`, and `git diff --check`. | 2026-06-06 |
 
 ## 11. Completion Criteria
 
@@ -253,6 +286,8 @@ This plan preserves upstream-following profiles, keeps all user-required plugins
 - **DONE-004**: `scripts/ci/validate-cache-key-policy.sh` exists and is executed by `.github/workflows/ci-lint.yml`.
 - **DONE-005**: Documentation describes period-based keys, fallback restore, matched-key save policy, and dry-run-first cleanup.
 - **DONE-006**: Local validators TEST-001 through TEST-012 pass.
+- **DONE-006A**: LuCI Chinese policy follows the official upstream language option, does not locally override `feeds.conf.default`, does not replace official theme/uHTTPd/runtime defaults, and does not hard-code per-plugin translation packages.
+- **DONE-006B**: PassWall overlay uses latest-tag-required policy for `luci-app-passwall` and records source provenance through the package overlay manifest.
 - **DONE-007**: Branch `codex/cache-stability-optimization` is pushed and GitHub Actions TEST-014 through TEST-016 pass.
 - **DONE-008**: x86 artifacts from the implementation branch include firmware, compile logs, config audit, smoke reports, size reports, provenance, package archive, and checksum evidence.
 - **DONE-009**: The implementation is fast-forward merged into `main` and `main` is pushed to `origin`.

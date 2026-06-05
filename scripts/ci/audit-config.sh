@@ -125,6 +125,8 @@ require_value CONFIG_PACKAGE_sqm-scripts y
 require_value CONFIG_PACKAGE_luci-app-sqm y
 require_value CONFIG_PACKAGE_luci y
 require_value CONFIG_PACKAGE_luci-base y
+require_value CONFIG_LUCI_LANG_zh_Hans y
+require_value CONFIG_PACKAGE_luci-i18n-base-zh-cn y
 require_value CONFIG_PACKAGE_rpcd y
 require_value CONFIG_PACKAGE_rpcd-mod-luci y
 require_value CONFIG_PACKAGE_uhttpd y
@@ -161,6 +163,8 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "CAKE scheduler: $(config_value CONFIG_PACKAGE_kmod-sched-cake || true)"
   echo "Performance defaults overlay: present"
   echo "LuCI meta: $(config_value CONFIG_PACKAGE_luci || true)"
+  echo "LuCI language zh_Hans: $(config_value CONFIG_LUCI_LANG_zh_Hans || true)"
+  echo "LuCI base zh-cn: $(config_value CONFIG_PACKAGE_luci-i18n-base-zh-cn || true)"
   echo "LuCI bootstrap theme: $(config_value CONFIG_PACKAGE_luci-theme-bootstrap || true)"
   echo "uHTTPd: $(config_value CONFIG_PACKAGE_uhttpd || true)"
   echo "uHTTPd ubus: $(config_value CONFIG_PACKAGE_uhttpd-mod-ubus || true)"

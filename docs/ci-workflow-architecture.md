@@ -29,6 +29,8 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Validates `devices/profiles.yml`.
   - Validates Dependabot ecosystem coverage.
   - Validates cache key period and save policy.
+  - Validates LuCI Simplified Chinese language policy.
+  - Validates PassWall overlay policy.
   - Validates optimization health summary generation.
 
 - `.github/workflows/optimization-health.yml`
@@ -52,6 +54,19 @@ This repository uses a declarative profile + reusable workflow structure for fir
 `firmware-build.yml` restores two cache families: `ccache-v2` and `build-accel-v2`. Primary keys are grouped by cache type, version, source repository slug, source branch, profile `cache_group`, and monthly cache period. Restore keys intentionally stop at the source/branch/group prefix so a previous period can accelerate the build without crossing toolchain boundaries.
 
 Cache save is stricter than exact-hit detection: save steps run only when `cache-matched-key` is empty. Exact hits and fallback hits both skip saving, which prevents a restored previous-period cache from creating a redundant new period cache on every calendar rollover.
+
+## Feeds, LuCI, and Overlays
+
+Current enabled profiles leave `feeds_conf` empty, so `config-feeds.sh prepare-feeds` does not replace upstream `feeds.conf.default`.
+
+- `coolsnowwolf/lede` declares `src-git luci https://github.com/coolsnowwolf/luci.git;openwrt-25.12`.
+- `immortalwrt/immortalwrt`, `VIKINGYFY/immortalwrt`, and `LiBwrt/openwrt-6.x` declare `src-git luci https://github.com/immortalwrt/luci.git`.
+
+LuCI Chinese support follows upstream LuCI rules. The shared fragment selects `CONFIG_LUCI_LANG_zh_Hans=y`; upstream `luci.mk` maps `zh_Hans` to `zh-cn` package aliases and creates matching `luci-i18n` packages for installed modules. The config audit verifies the defconfig result contains `CONFIG_PACKAGE_luci-i18n-base-zh-cn=y` without hard-coding per-plugin translation packages.
+
+ImmortalWrt's `luci` collection depends on `luci-light`; `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`. The Bootstrap theme installs its own default `main.mediaurlbase`, and `luci-base` depends on `rpcd`/`rpcd-mod-luci` and adds the uHTTPd LuCI ucode handler through its post-install script. Local config therefore avoids hard-coding LuCI runtime/library dependencies and audits those defaults instead of replacing them.
+
+PassWall remains an explicit overlay. `scripts/common/package` refreshes `Openwrt-Passwall/openwrt-passwall-packages` from `main` and pulls `Openwrt-Passwall/openwrt-passwall` through `UPDATE_PACKAGE_LATEST_TAG`, after removing conflicting local/feed directories.
 
 ## Profile Contract
 
@@ -209,6 +224,8 @@ find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-cache-key-policy.sh
+bash scripts/ci/validate-luci-zh-cn-config.sh
+bash scripts/ci/validate-passwall-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/optimization-report.sh summary "$PWD"
 ```
