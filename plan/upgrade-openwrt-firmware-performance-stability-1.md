@@ -1,8 +1,8 @@
 ---
 goal: OpenWrt firmware performance and stability optimization
-version: 1.3
+version: 1.4
 date_created: 2026-06-01
-last_updated: 2026-06-02
+last_updated: 2026-06-06
 owner: wajie
 status: Completed
 tags:
@@ -21,6 +21,8 @@ tags:
 This implementation plan defines the concrete work required to keep the OpenWrt firmware builds stable, fast, and observable while preserving upstream-following profiles and all user-required plugins. The plan prioritizes `x86_64_LEDE` and `x86_64_immortalWrt`, then expands the same guardrails to Qualcommax targets after the x86 path is proven.
 
 The current baseline includes profile drift reporting, x86 smoke validation, failure-context artifacts, cache grouping, cache maintenance guardrails, layered config fragments, Samba4/autosamba exclusion, conservative runtime performance defaults, firmware size reporting, package overlay provenance, and build environment provenance. The x86 proof and cache dry-run proof are complete for branch `codex-openwrt-optimization-execution`; Qualcommax expansion remains a follow-up operating task after this branch is merged.
+
+2026-06-06 current baseline update: the follow-up cache, LuCI, PassWall, x86 validation, merge, and branch cleanup work has been completed on `main`. Current proof includes successful x86 branch run `27031596559`, successful main run `27041924279`, monthly cache-period keys, matched-key-only cache saves, official LuCI Simplified Chinese language selection, official PassWall latest-tag overlay, Samba4/autosamba exclusion, and clean local/remote branch cleanup. The ongoing plan below now acts as the operating checklist for future firmware configuration, performance, and stability work.
 
 ## 1. Requirements & Constraints
 
@@ -242,23 +244,100 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 
 ## 11. OpenWrt 固件性能与稳定性优化实施计划
 
-本节是给人工执行和复盘使用的完整中文路线图。执行时以第 2 节任务表为准，状态变更必须同步回任务表和第 10 节证据日志。
+本节是给人工执行和复盘使用的当前中文路线图。历史实现任务仍以第 2 节任务表和第 10 节证据日志为准；从 2026-06-06 起，本节作为后续配置整理、性能优化、稳定构建和产物验收的主计划。
 
 | 阶段 | 目标 | 关键动作 | 验收标准 | 当前状态 |
 |------|------|----------|----------|----------|
-| P0: x86 稳定生成 | 先保障 `x86_64_LEDE` 和 `x86_64_immortalWrt` 稳定产出。 | 跟踪 run `26763561699`；验证 firmware、compile-log、config-audit、smoke 四类 artifact；失败时基于失败日志修复并重新触发 `x86_64_all`。 | 两个 x86 profile 均成功，且 artifact 内含 raw compressed image、`Packages.tar.gz`、`firmware-size-report.md`、provenance、`sha256sums.txt` 和 smoke 报告。 | 已完成 |
-| P1: 配置守护 | 让必要插件、启动能力和性能能力变成可审计约束。 | 保持 `devices/profiles.yml` 跟上游分支；继续维护 `scripts/common/config/*.config` 分层；在 `scripts/ci/audit-config.sh` 中守护 Samba4/autosamba 互斥、x86 boot、性能包和 overlay。 | 新增性能默认值或关键插件时，本地 `test-config-audit.sh` 必须覆盖；不能通过移除必要插件解决构建问题。 | 已完成 |
-| P2: 构建加速 | 提升复用率并降低 cache 容量风险。 | 保持 cache key 按 cache 类型、版本、source slug、source branch、cache group 和周序隔离；每周先 dry-run；真实删除必须有用户确认和 `ref` 或 `prefix`。 | Cache Health 能展示命中、体积、最近访问时间；dry-run 能列出候选但不会误删当前周或跨组最新缓存。 | 已完成 |
-| P3: 产物可观测 | 让每个成功或失败的构建都能复盘。 | 保留 compile log、failure context、firmware size report、package overlay provenance、build environment provenance 和 artifact manifest。 | 成功构建可以判断固件体积、包来源、runner 环境和镜像完整性；失败构建可以定位到包、下载、磁盘、内存或工具链阶段。 | 已完成 |
-| P4: 运行时性能 | 在不破坏用户网络的前提下提升默认性能。 | 保持 BBR、fq_codel、TCP Fast Open、MTU probing、backlog、TCP buffer、irqbalance、microcode、virtio、常见 x86 NIC、SQM/CAKE/IFB 等配置。 | 默认值保守，不强制启用会改变用户拓扑的流控策略；缺失 overlay 或关键包时配置审计失败。 | 已实现基础能力 |
-| P5: 扩展到 Qualcommax | x86 通过后再扩大验证范围。 | 触发 `qualcommax_all`，复用 x86 的 cache、audit、size、provenance 和 failure-context 机制；记录 rootfs 压力和上游包变更。 | Qualcommax profile 失败时有足够证据判断是上游、包 overlay、rootfs、配置还是 runner 问题。 | 后续执行 |
-| P6: 合入与清理 | 主分支只接收可证明稳定的优化结果。 | 完成实现提交的 x86 证明、cache dry-run 证据、local validators、profile upstream-following 检查，再合入 `main`；合入后清理旧分支。 | `main` 拥有最新计划证据和稳定构建链路；旧分支只在确认不再需要后删除。 | 已完成 |
+| P0: Profile 与上游基线 | profile 继续跟随上游，同时让上游变化可追踪。 | 保持 `devices/profiles.yml` 的 `source_branch` 不 pin；不使用本地 `feeds_conf` 覆盖；通过 Optimization Health 输出 source repo、branch、remote HEAD、profile hash 和 cache group。 | 每个 enabled profile 能追溯 source repo、source branch、source commit、config fragments 和 cache group；上游漂移不会静默发生。 | 已实施，持续执行 |
+| P1: 官方默认配置优先 | 对比上游默认配置，减少本地强行硬编码。 | 审计 OpenWrt/ImmortalWrt/LEDE 上游 `feeds.conf.default`、LuCI、uHTTPd、rpcd、x86 image 和 package 默认依赖；本地只保留必要能力选择与构建产物约束。 | LuCI 语言只使用 `CONFIG_LUCI_LANG_zh_Hans=y`；LuCI runtime、主题、uHTTPd 和 rpcd 由官方依赖带出；本地硬编码都有明确理由。 | 进行中 |
+| P2: 固件配置守护 | 把必要插件、启动能力、LuCI 中文、Samba4 和 PassWall 变成可审计约束。 | 保持 `scripts/common/config/*.config` 分层；Samba4 启用且 autosamba 禁用；PassWall 清理冲突目录并拉取最新官方 tag；审计 defconfig-expanded 结果。 | `test-config-audit.sh`、`validate-luci-zh-cn-config.sh`、`validate-passwall-overlay.sh` 均通过；defconfig-expanded 结果包含 LuCI i18n、uHTTPd、rpcd、主题、Samba4、BBR、SQM 和 CAKE。 | 已实施，持续守护 |
+| P3: x86 稳定生成证明 | 先证明 x86 两个 profile 可以稳定产出。 | 触发 `Firmware CI` 的 `target=x86_64_all`；检查 `x86_64_LEDE` 和 `x86_64_immortalWrt` 的 compile、config audit、firmware artifact、smoke artifact。 | 两个 x86 job 均 success；artifact 包含 `build.config`、`artifact-manifest.txt`、`firmware-size-report.md`、`build-environment-provenance.md`、`package-source-manifest.tsv`、`Packages.tar.gz`、x86 image、`sha256sums.txt` 和 smoke summary。 | 已完成，branch run `27031596559` 与 main run `27041924279` 通过 |
+| P4: 缓存复用与容量控制 | 降低 GitHub Actions cache 重复保存和容量超额风险。 | cache key 使用 monthly `cache_period`；restore prefix 只在同 source slug、branch、cache group 内 fallback；save 仅在 `cache-matched-key == ''` 时执行；维护 workflow 先 dry-run。 | Optimization Health 显示 cache count、size、prefix groups、last access；Cache Maintenance dry-run 能列出候选且不删除；无用户确认不执行真实删除。 | 已实施，持续观察 |
+| P5: 运行时性能优化 | 使用保守默认值提升吞吐和响应，同时避免改变用户网络拓扑。 | 保持 BBR、fq_codel、TCP Fast Open、MTU probing、backlog、TCP buffer；启用 irqbalance、microcode、virtio、常见 x86 NIC、SQM、CAKE 和 IFB；不默认强制开启流控策略。 | 缺少 performance overlay 或关键性能包时配置审计失败；成功 artifact 能看到性能配置来源和固件体积压力。 | 已实施，后续按实测微调 |
+| P6: 构建可观测与 provenance | 让成功和失败构建都能复盘。 | 保留 compile log、failure context、firmware size report、package source manifest、build environment provenance、release metadata 和 checksum。 | 失败时能定位下载、磁盘、内存、工具链或包编译阶段；成功时能校验产物完整性、包来源、runner 环境和固件大小。 | 已实施 |
+| P7: Qualcommax 扩展 | x86 稳定后扩大验证范围。 | 触发 `qualcommax_all`；复用同一套 config audit、cache、artifact、failure context、size report 和 provenance 检查。 | 失败能归类为上游源码、包 overlay、rootfs 空间、runner 内存或本地配置问题；通过后再考虑 `target=all`。 | 后续执行 |
+| P8: 固化运维节奏 | 把稳定生成变成可重复流程。 | 每次大改先跑本地 validators；再跑 Optimization Health；再跑 `x86_64_all`；容量紧张时先 Cache Maintenance dry-run；Release 前做 artifact/release 检查。 | 新增 profile、插件或性能配置时有固定验证链路；缓存清理和 Release 发布都有证据记录。 | 持续执行 |
 
 ### 11.1 Completion Audit
 
-1. Cache redundancy is confirmed: eight caches exist on `refs/heads/main`, grouped into four cache prefix groups with current-week `2026-22` and previous-week `2026-21` entries.
-2. Cache cleanup behavior is confirmed dry-run only: run `26762407724` matched eight caches, four groups, and four previous-week cleanup candidates; no cache was deleted.
-3. x86 firmware generation is confirmed: Firmware CI run `26763561699` completed successfully for `x86_64_LEDE` and `x86_64_immortalWrt`.
-4. x86 artifacts are confirmed by file-level checks: both profiles include firmware metadata, size reports, provenance reports, package archives, compressed x86 images, sha256 files, compile logs, config audits, and smoke reports.
-5. Required plugin and performance constraints are confirmed by config-audit artifacts: Samba4 is enabled, `autosamba` is disabled, and BBR/SQM/CAKE/performance overlay checks pass.
-6. Profile upstream-following behavior remains intact: this plan does not pin `devices/profiles.yml` source branches and keeps upstream-following as a requirement.
+1. Profile upstream-following behavior remains intact: `devices/profiles.yml` keeps upstream branches and does not pin source commits.
+2. Upstream LuCI/feed behavior is confirmed: enabled profiles use each source tree's official `feeds.conf.default`, and LuCI Simplified Chinese is selected through official `CONFIG_LUCI_LANG_zh_Hans=y`.
+3. Local LuCI hard-coding has been reduced: `base.config` keeps `CONFIG_PACKAGE_luci=y` as the official collection selector and no longer forces LuCI runtime/library internals.
+4. Samba4/autosamba policy is confirmed: Samba4 stays enabled, `autosamba` stays disabled, and config audit prevents coexistence.
+5. PassWall overlay policy is confirmed: local/feed conflicts are cleaned, dependency packages use the official packages repo, and `luci-app-passwall` uses the latest official tag policy.
+6. Cache redundancy mitigation is confirmed: workflow cache keys use monthly `cache_period`; save steps require empty `cache-matched-key`, so fallback cache restores do not create duplicate saves.
+7. Cache cleanup behavior remains dry-run-first: real deletion is not part of normal optimization and requires explicit user approval plus concrete `ref` or `prefix`.
+8. x86 firmware generation is confirmed on branch run `27031596559` and main run `27041924279`; both `x86_64_LEDE` and `x86_64_immortalWrt` succeeded.
+9. x86 artifacts are confirmed by file-level checks: both profiles include firmware metadata, size reports, provenance reports, package archives, compressed x86 images, sha256 files, compile logs, config audits, and smoke reports.
+10. Required plugin and performance constraints are confirmed by config-audit artifacts: LuCI Chinese, uHTTPd/rpcd, Samba4/autosamba, BBR/SQM/CAKE, and performance overlay checks pass.
+
+### 11.2 执行清单
+
+| Step | Command or Check | Expected Result |
+|------|------------------|-----------------|
+| CHECK-001 | `bash scripts/ci/validate-cache-key-policy.sh` | cache period、matched-key save policy 和隔离边界有效。 |
+| CHECK-002 | `bash scripts/ci/validate-luci-zh-cn-config.sh` | enabled profiles 都包含 LuCI 中文片段，且没有 local feeds override 或 per-plugin i18n 硬编码。 |
+| CHECK-003 | `bash scripts/ci/validate-passwall-overlay.sh` | PassWall 主应用使用 latest-tag-required，依赖包使用官方 packages 仓。 |
+| CHECK-004 | `bash scripts/ci/validate-profiles.sh` | profile matrix、config paths、config fragments 和 upstream-following branch 配置有效。 |
+| CHECK-005 | `bash scripts/ci/test-config-audit.sh` | Samba4/autosamba、LuCI/uHTTPd/rpcd、BBR/SQM/CAKE、x86 boot 和 overlay 审计通过。 |
+| CHECK-006 | `bash scripts/ci/test-config-feeds.sh` | config fragment、files overlay 和 package overlay 加载行为符合预期。 |
+| CHECK-007 | `bash scripts/ci/test-artifacts-release.sh` and `bash scripts/ci/test-smoke-x86.sh` | artifact/release 规则和 x86 smoke fixture 通过。 |
+| CHECK-008 | `ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"` | workflow YAML 均可解析。 |
+| CHECK-009 | `find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n` | shell 脚本语法通过。 |
+| CHECK-010 | `gh workflow run optimization-health.yml --repo yyg20101/OpenWrt-firmware --ref main` | profile、matrix、cache health 报告成功生成。 |
+| CHECK-011 | `gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=x86_64_all -f release=false` | main 分支两个 x86 profile 均构建成功。 |
+| CHECK-012 | `gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=qualcommax_all -f release=false` | x86 稳定后扩展到 Qualcommax，并保留失败诊断 artifact。 |
+
+### 11.3 配置整理原则
+
+- **CFG-001**: 优先查看上游源码默认配置和包依赖链，再决定是否保留本地配置。
+- **CFG-002**: 本地配置只承担三类职责：选择用户必要插件、固定目标产物形态、守护已验证的性能和稳定性能力。
+- **CFG-003**: 不把官方元包已经提供的依赖拆成一堆本地硬编码；例如 LuCI theme、uHTTPd、rpcd 和 i18n 默认应由官方 LuCI feed 提供。
+- **CFG-004**: 不能通过移除必要插件解决 rootfs、编译耗时或依赖冲突；优先使用分层配置、rootfs/size 报告、失败上下文和上游来源追踪。
+- **CFG-005**: x86 image、rootfs partsize、GRUB/EFI、VM-only image 裁剪属于产物约束，可以本地保留，但要由审计和 artifact 证明。
+- **CFG-006**: `CONFIG_DEVEL`、`CONFIG_CCACHE`、initramfs、多 profile、per-device rootfs 等构建期配置需要逐项标注用途，避免无证据的强制开关。
+- **CFG-007**: Broad hardware support 片段必须按设备族归档，后续新增设备优先新增 profile-specific fragment，而不是把所有能力继续堆进 base。
+
+### 11.4 性能与稳定性验收重点
+
+- **AC-001**: `build.config` 中能看到 `CONFIG_LUCI_LANG_zh_Hans=y`，defconfig-expanded audit 中能看到 `CONFIG_PACKAGE_luci-i18n-base-zh-cn=y`。
+- **AC-002**: `CONFIG_PACKAGE_samba4-server=y`，`CONFIG_PACKAGE_autosamba` 不启用。
+- **AC-003**: BBR、SQM scripts、CAKE scheduler、IFB 和 performance defaults overlay 均通过 config audit。
+- **AC-004**: x86 artifact 至少包含一个 raw compressed image，并且 `shasum -a 256 -c sha256sums.txt` 通过。
+- **AC-005**: smoke summary 显示 static checks 通过，并能看到 boot-visible 或明确的早期启动证据。
+- **AC-006**: `package-source-manifest.tsv` 能追溯 PassWall 官方仓库、ref/tag 和 commit。
+- **AC-007**: cache log 显示 cache period、matched key、save policy；fallback 命中时不会因为 primary key 不同而保存重复 cache。
+- **AC-008**: Cache Maintenance 真实删除保持挂起，直到用户基于 dry-run 输出批准具体 `ref` 或 `prefix`。
+- **AC-009**: main 分支构建产物包含 `build.config`、`artifact-manifest.txt`、`firmware-size-report.md`、`build-environment-provenance.md`、`Packages.tar.gz` 和 checksum。
+
+### 11.5 后续优化方向
+
+- **NEXT-001**: 完成一次上游默认配置对比审计，优先清理重复片段和无证据硬编码，尤其是 `base.config` 与 source-specific extra fragment 的重复项。
+- **NEXT-002**: 在 `qualcommax_all` 首次证明后，按 profile 记录 rootfs 压力和编译失败包，必要时拆分 profile-specific size tuning。
+- **NEXT-003**: 对 PassWall 及代理依赖增加更细的 artifact provenance 摘要，方便判断失败来自主应用 tag、依赖包仓、feeds 冲突还是上游源码变更。
+- **NEXT-004**: 观察 main 分支第一轮 monthly cache 行为；如 fallback 一直命中过旧 weekly cache，再由用户确认是否按 dry-run 候选清理旧缓存。
+- **NEXT-005**: 若 runner 内存成为瓶颈，优先调整 `make_compile_jobs` 和 fallback 策略，再考虑 profile 级别 rootfs/镜像大小参数。
+- **NEXT-006**: Release 前新增一次 `optimization-report.sh release <repo> <tag>` 复核，确保 `Packages.tar.gz` 保留、VM-only 镜像排除、checksum 和 manifest 齐全。
+
+### 11.6 上游默认配置对比记录
+
+| Area | Upstream Evidence | Local Decision | Status |
+|------|-------------------|----------------|--------|
+| Feeds | `coolsnowwolf/lede` uses the official coolsnowwolf LuCI feed; ImmortalWrt-family sources use the official ImmortalWrt LuCI feed; enabled profiles do not set `feeds_conf`. | Keep upstream `feeds.conf.default`; do not add local feed overrides. | 已确认 |
+| LuCI language | Active LuCI feeds expose `CONFIG_LUCI_LANG_zh_Hans` and generate `zh-cn` i18n packages from the official LuCI language mechanism. | Keep only `scripts/common/config/luci-zh-cn.config` with `CONFIG_LUCI_LANG_zh_Hans=y`; do not hard-code per-plugin i18n packages. | 已实施 |
+| LuCI runtime, theme, uHTTPd, rpcd | Official LuCI collections provide default theme, uHTTPd, uHTTPd ubus, and rpcd dependencies through package metadata and post-install behavior. | Keep `CONFIG_PACKAGE_luci=y`; do not force local LuCI runtime/library internals; verify expanded result through config audit. | 已实施 |
+| Samba | Upstream feeds may provide `autosamba`, and Samba4/autosamba can conflict on block hotplug paths. | Keep `luci-app-samba4` only in `samba.config`; keep `autosamba` disabled there; remove duplicate Samba declarations from other fragments. | 已整理 |
+| ImmortalWrt extra fragment | Historical ImmortalWrt extra selections duplicated packages already selected by shared `base.config`, `network-performance.config`, `proxy.config`, and `samba.config`. | Keep `immortalwrt-extra.config` as an empty source-specific extension point; do not duplicate shared required plugin selections. | 已整理 |
+| x86 images | ImmortalWrt defaults GRUB/EFI images on for x86; LEDE defaults differ, and x86 image Makefiles generate raw, EFI, and VM formats according to config. | Keep local x86 image/partsize and VM-format pruning as product artifact constraints; verify raw image and checksum in artifacts. | 已确认 |
+| Build acceleration | Upstream `CONFIG_DEVEL` gates `CONFIG_CCACHE`; these are build-time options, not firmware runtime packages. | Keep `CONFIG_DEVEL=y` and `CONFIG_CCACHE=y` as CI build acceleration inputs, paired with Actions cache policy and local validators. | 已确认 |
+| Initramfs and multi-profile | Upstream image logic changes artifact shape when initramfs, multi-profile, or per-device rootfs are enabled. | Keep explicit single-device/rootfs artifact guardrails in `base.config` because CI expects one declared profile and complete firmware artifacts. | 已确认 |
+
+### 11.7 2026-06-06 配置整理验证记录
+
+| Evidence | Result |
+|----------|--------|
+| Upstream source refresh | `/private/tmp/openwrt-upstream-config-audit/{lede,immortalwrt,viking,libwrt}` all reported `Already up to date`; `git fetch origin main` completed. |
+| Config fragment cleanup | Removed duplicate `CONFIG_PACKAGE_luci-app-samba4` from `base.config`; removed duplicate `autosamba` guard from `lede-extra.config`; changed `immortalwrt-extra.config` into an empty source-specific extension point because its package selections duplicate shared fragments. |
+| Required plugin static audit | All five enabled profiles still include LuCI, PassWall, HomeProxy, Samba4, WireGuard, LuCI Chinese, BBR, SQM, and CAKE through their combined device config and shared fragments. |
+| Local validators | Passed `validate-profiles.sh`, `validate-luci-zh-cn-config.sh`, `validate-passwall-overlay.sh`, `test-config-audit.sh`, `test-config-feeds.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `validate-cache-key-policy.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, workflow YAML parsing, shell syntax checks, and `git diff --check`. |
+| Artifact validation requirement | Because config fragments changed, new GitHub Actions x86 artifact proof should be collected after this change is committed and pushed. The required proof target is `Firmware CI` on `main` with `target=x86_64_all` and `release=false`. |
