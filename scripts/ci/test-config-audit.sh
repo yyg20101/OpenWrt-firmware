@@ -60,7 +60,6 @@ CONFIG_PACKAGE_kmod-ata-ahci=y
 CONFIG_PACKAGE_kmod-nvme=y
 CONFIG_PACKAGE_luci-app-samba4=y
 # CONFIG_PACKAGE_autosamba is not set
-CONFIG_PACKAGE_luci-app-alist=y
 CONFIG_PACKAGE_luci-app-msd_lite=y
 CONFIG_PACKAGE_luci-app-passwall=y
 CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y
@@ -91,10 +90,6 @@ EOF
 expect_pass() {
   write_config "${OPENWRT_DIR}/.config"
   bash "${ROOT_DIR}/scripts/ci/audit-config.sh" "${OPENWRT_DIR}" "${WORK_DIR}" "fixture-pass" >/dev/null
-  if ! grep -q "CONFIG_PACKAGE_luci-app-alist" "${WORK_DIR}/config-audit/summary.txt"; then
-    echo "ERROR: requested LuCI app summary omitted luci-app-alist" >&2
-    exit 1
-  fi
   if ! grep -q "CONFIG_PACKAGE_luci-app-msd_lite" "${WORK_DIR}/config-audit/summary.txt"; then
     echo "ERROR: requested LuCI app summary omitted luci-app-msd_lite" >&2
     exit 1
@@ -194,7 +189,6 @@ expect_fail_when_defconfig_drops_luci_app() {
 }
 
 expect_pass
-expect_fail_when_defconfig_drops_luci_app "CONFIG_PACKAGE_luci-app-alist"
 expect_fail_when_defconfig_drops_luci_app "CONFIG_PACKAGE_luci-app-msd_lite"
 expect_fail_without "CONFIG_PACKAGE_uhttpd" "requires CONFIG_PACKAGE_uhttpd=y"
 expect_fail_without "CONFIG_PACKAGE_uhttpd-mod-ubus" "requires CONFIG_PACKAGE_uhttpd-mod-ubus=y"

@@ -252,7 +252,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 |------|------|----------|----------|----------|
 | P0: Profile 与上游基线 | profile 继续跟随上游，同时让上游变化可追踪。 | 保持 `devices/profiles.yml` 的 `source_branch` 不 pin；不使用本地 `feeds_conf` 覆盖；通过 Optimization Health 输出 source repo、branch、remote HEAD、profile hash 和 cache group。 | 每个 enabled profile 能追溯 source repo、source branch、source commit、config fragments 和 cache group；上游漂移不会静默发生。 | 已实施，持续执行 |
 | P1: 官方默认配置优先 | 对比上游默认配置，减少本地强行硬编码。 | 审计 OpenWrt/ImmortalWrt/LEDE 上游 `feeds.conf.default`、LuCI、uHTTPd、rpcd、x86 image 和 package 默认依赖；本地只保留必要能力选择与构建产物约束。 | LuCI 语言只使用 `CONFIG_LUCI_LANG_zh_Hans=y`；LuCI runtime、主题、uHTTPd 和 rpcd 由官方依赖带出；本地硬编码都有明确理由。 | 进行中 |
-| P2: 固件配置守护 | 把必要插件、启动能力、LuCI 中文、Samba4 和 PassWall 变成可审计约束。 | 保持 `scripts/common/config/*.config` 分层；Samba4 启用且 autosamba 禁用；PassWall 清理冲突目录并拉取最新官方 tag；source-specific 插件只放对应片段；审计 defconfig-expanded 结果。 | `test-config-audit.sh`、`validate-luci-zh-cn-config.sh`、`validate-passwall-overlay.sh`、`validate-plugin-overlay.sh` 均通过；defconfig-expanded 结果包含请求的 LuCI app、LuCI i18n、uHTTPd、rpcd、主题、Samba4、BBR、SQM 和 CAKE。 | 已实施，持续守护 |
+| P2: 固件配置守护 | 把必要插件、启动能力、LuCI 中文、Samba4 和 PassWall 变成可审计约束。 | 保持 `scripts/common/config/*.config` 分层；Samba4 启用且 autosamba 禁用；PassWall 清理冲突目录并拉取最新官方 tag；source-specific 插件只放对应片段；审计 defconfig-expanded 结果；不再维护固定插件 overlay 白名单。 | `test-config-audit.sh`、`validate-luci-zh-cn-config.sh`、`validate-passwall-overlay.sh` 均通过；defconfig-expanded 结果包含请求的 LuCI app、LuCI i18n、uHTTPd、rpcd、主题、Samba4、BBR、SQM 和 CAKE。 | 已实施，持续守护 |
 | P3: x86 稳定生成证明 | 先证明 x86 两个 profile 可以稳定产出。 | 触发 `Firmware CI` 的 `target=x86_64_all`；检查 `x86_64_LEDE` 和 `x86_64_immortalWrt` 的 compile、config audit、firmware artifact、smoke artifact。 | 两个 x86 job 均 success；artifact 包含 `build.config`、`artifact-manifest.txt`、`firmware-size-report.md`、`build-environment-provenance.md`、`package-source-manifest.tsv`、`Packages.tar.gz`、x86 image、`sha256sums.txt` 和 smoke summary。 | 已完成，branch run `27031596559` 与 main run `27041924279` 通过 |
 | P4: 缓存复用与容量控制 | 降低 GitHub Actions cache 重复保存和容量超额风险。 | cache key 使用 monthly `cache_period`；restore prefix 只在同 source slug、branch、cache group 内 fallback；save 仅在 `cache-matched-key == ''` 时执行；维护 workflow 先 dry-run。 | Optimization Health 显示 cache count、size、prefix groups、last access；Cache Maintenance dry-run 能列出候选且不删除；无用户确认不执行真实删除。 | 已实施，持续观察 |
 | P5: 运行时性能优化 | 使用保守默认值提升吞吐和响应，同时避免改变用户网络拓扑。 | 保持 BBR、fq_codel、TCP Fast Open、MTU probing、backlog、TCP buffer；启用 irqbalance、microcode、virtio、常见 x86 NIC、SQM、CAKE 和 IFB；不默认强制开启流控策略。 | 缺少 performance overlay 或关键性能包时配置审计失败；成功 artifact 能看到性能配置来源和固件体积压力。 | 已实施，后续按实测微调 |
@@ -271,7 +271,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 7. Cache cleanup behavior remains dry-run-first: real deletion is not part of normal optimization and requires explicit user approval plus concrete `ref` or `prefix`.
 8. x86 firmware generation is confirmed on branch run `27031596559` and main run `27041924279`; both `x86_64_LEDE` and `x86_64_immortalWrt` succeeded.
 9. x86 artifacts are confirmed by file-level checks: both profiles include firmware metadata, size reports, provenance reports, package archives, compressed x86 images, sha256 files, compile logs, config audits, and smoke reports.
-10. Required web, Samba, and performance constraints are confirmed by config-audit artifacts: LuCI Chinese, uHTTPd/rpcd, Samba4/autosamba, BBR/SQM/CAKE, and performance overlay checks pass. Required LuCI application presence is now additionally guarded by requested-vs-effective config audit and the plugin overlay validator, and must be proven by the next x86 run.
+10. Required web, Samba, and performance constraints are confirmed by config-audit artifacts: LuCI Chinese, uHTTPd/rpcd, Samba4/autosamba, BBR/SQM/CAKE, and performance overlay checks pass. Requested LuCI application presence is guarded by requested-vs-effective config audit; the fixed plugin overlay whitelist has been removed so future plugin additions do not require a second policy list.
 
 ### 11.2 执行清单
 
@@ -280,7 +280,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 | CHECK-001 | `bash scripts/ci/validate-cache-key-policy.sh` | cache period、matched-key save policy 和隔离边界有效。 |
 | CHECK-002 | `bash scripts/ci/validate-luci-zh-cn-config.sh` | enabled profiles 都包含 LuCI 中文片段，且没有 local feeds override 或 per-plugin i18n 硬编码。 |
 | CHECK-003 | `bash scripts/ci/validate-passwall-overlay.sh` | PassWall 主应用使用 latest-tag-required，依赖包使用官方 packages 仓。 |
-| CHECK-003B | `bash scripts/ci/validate-plugin-overlay.sh` | 三方插件 overlay、PassWall 全固件覆盖、OpenVPN/LEDE-only 插件位置有效。 |
+| CHECK-003B | config-audit artifact `missing-luci-apps.txt` | 请求的 LuCI app 在 defconfig 后未丢失；PassWall 全固件覆盖由 `validate-passwall-overlay.sh` 守护。 |
 | CHECK-004 | `bash scripts/ci/validate-profiles.sh` | profile matrix、config paths、config fragments 和 upstream-following branch 配置有效。 |
 | CHECK-005 | `bash scripts/ci/test-config-audit.sh` | 请求的 LuCI app 不被 defconfig 丢弃；Samba4/autosamba、LuCI/uHTTPd/rpcd、BBR/SQM/CAKE、x86 boot 和 overlay 审计通过。 |
 | CHECK-006 | `bash scripts/ci/test-config-feeds.sh` | config fragment、files overlay 和 package overlay 加载行为符合预期。 |
@@ -331,7 +331,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 | LuCI runtime, theme, uHTTPd, rpcd | Official LuCI collections provide default theme, uHTTPd, uHTTPd ubus, and rpcd dependencies through package metadata and post-install behavior. | Keep `CONFIG_PACKAGE_luci=y`; do not force local LuCI runtime/library internals; verify expanded result through config audit. | 已实施 |
 | Samba | Upstream feeds may provide `autosamba`, and Samba4/autosamba can conflict on block hotplug paths. | Keep `luci-app-samba4` only in `samba.config`; keep `autosamba` disabled there; remove duplicate Samba declarations from other fragments. | 已整理 |
 | Source-specific plugins | `luci-app-openvpn` exists in the checked LEDE LuCI feed but not in the checked ImmortalWrt LuCI feed. Several LEDE-oriented selections are intentionally carried in `lede-extra.config`. | Keep OpenVPN and LEDE-only apps in `lede-extra.config`; do not request them from non-LEDE profiles. | 已实施 |
-| Third-party plugin overlays | Verified required third-party repositories expose package Makefiles for Alist, GecoOS AC, mini-diskmanager, partexp, wolplus, and LEDE-only mwan3helper. | Overlay shared required apps for supported source trees; overlay mwan3helper only for LEDE; audit requested apps after defconfig. | 已实施，待新 x86 产物证明 |
+| Third-party plugin overlays | Verified selected third-party repositories expose package Makefiles for GecoOS AC, mini-diskmanager, partexp, wolplus, and LEDE-only mwan3helper. `luci-app-alist` has been intentionally removed. | Overlay selected shared apps for supported source trees; overlay mwan3helper only for LEDE; audit requested apps after defconfig. | 已实施，待新 x86 产物证明 |
 | ImmortalWrt extra fragment | Historical ImmortalWrt extra selections duplicated packages already selected by shared `base.config`, `network-performance.config`, `proxy.config`, and `samba.config`. | Keep `immortalwrt-extra.config` as an empty source-specific extension point; do not duplicate shared required plugin selections. | 已整理 |
 | x86 images | ImmortalWrt defaults GRUB/EFI images on for x86; LEDE defaults differ, and x86 image Makefiles generate raw, EFI, and VM formats according to config. | Keep local x86 image/partsize and VM-format pruning as product artifact constraints; verify raw image and checksum in artifacts. | 已确认 |
 | Build acceleration | Upstream `CONFIG_DEVEL` gates `CONFIG_CCACHE`; these are build-time options, not firmware runtime packages. | Keep `CONFIG_DEVEL=y` and `CONFIG_CCACHE=y` as CI build acceleration inputs, paired with Actions cache policy and local validators. | 已确认 |
@@ -391,7 +391,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 | IMPL-005 | `scripts/common/config/luci-zh-cn.config` | 保持官方语言选择 `CONFIG_LUCI_LANG_zh_Hans=y`。 | 不硬编码 `luci-i18n-*-zh-cn` per-plugin 包。 |
 | IMPL-006 | `scripts/common/config/samba.config` | 集中管理 Samba4/autosamba 策略。 | `CONFIG_PACKAGE_luci-app-samba4=y`；`# CONFIG_PACKAGE_autosamba is not set`。 |
 | IMPL-007 | `scripts/common/config/proxy.config` and `scripts/common/Packages.sh` | 保持 PassWall/HomeProxy 必要插件和官方 overlay 来源策略。 | `validate-passwall-overlay.sh` 通过；artifact provenance 可追溯 tag/ref/commit。 |
-| IMPL-008 | `scripts/common/config/base.config`, `scripts/common/config/lede-extra.config`, `scripts/common/package` | 三方插件共享 overlay，LEDE-only 插件只进入 LEDE 片段；OpenVPN 保持 LEDE-only。 | `validate-plugin-overlay.sh` 通过；非 LEDE profile 不请求 OpenVPN。 |
+| IMPL-008 | `scripts/common/config/base.config`, `scripts/common/config/lede-extra.config`, `scripts/common/package` | 三方插件按当前请求选择 overlay，LEDE-only 插件只进入 LEDE 片段；OpenVPN 保持 LEDE-only；`luci-app-alist` 不再请求。 | `test-config-audit.sh` 通过；非 LEDE profile 不请求 OpenVPN；config-audit 证明请求的 LuCI app 未丢失。 |
 | IMPL-009 | `scripts/common/config/network-performance.config` | 保留 BBR、SQM、CAKE、IFB、scheduler 支持。 | config audit 报告 `TCP BBR: y`、`SQM scripts: y`、`CAKE scheduler: y`。 |
 | IMPL-010 | `scripts/common/config/x86.config` and `scripts/common/config/x86-performance.config` | 保留 x86 image、rootfs partsize、GRUB/EFI、virtio、microcode、irqbalance、常见 NIC。 | x86 artifact 有 raw compressed image；smoke static checks 通过。 |
 | IMPL-011 | `files/etc/uci-defaults/99-performance-defaults` | 只写保守 sysctl 默认值，不自动启用用户未配置的限速或复杂策略。 | performance overlay 存在；缺失时 config audit 失败。 |
@@ -409,18 +409,17 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 | VAL-001 | `bash scripts/ci/validate-profiles.sh` | profile matrix 与 config fragments 有效。 |
 | VAL-002 | `bash scripts/ci/validate-luci-zh-cn-config.sh` | LuCI 中文策略符合官方语言选择。 |
 | VAL-003 | `bash scripts/ci/validate-passwall-overlay.sh` | PassWall overlay 策略可追溯且无冲突。 |
-| VAL-004 | `bash scripts/ci/validate-plugin-overlay.sh` | 必需三方插件 overlay、PassWall 全固件覆盖、LEDE-only 边界有效。 |
-| VAL-005 | `bash scripts/ci/test-config-audit.sh` | 必要插件、LuCI 依赖、Samba4/autosamba、性能能力和 x86 guardrails 通过。 |
-| VAL-006 | `bash scripts/ci/test-config-feeds.sh` | feeds、config fragments、files overlay、package overlay 加载行为正确。 |
-| VAL-007 | `bash scripts/ci/test-artifacts-release.sh` | artifact 与 release packaging 规则通过。 |
-| VAL-008 | `bash scripts/ci/test-smoke-x86.sh` | x86 smoke fixture 和 gzip warning 分类通过。 |
-| VAL-009 | `bash scripts/ci/validate-cache-key-policy.sh` | cache period、fallback、save 条件和隔离边界有效。 |
-| VAL-010 | `bash scripts/ci/validate-cache-maintenance.sh` | cache cleanup guardrails 有效。 |
-| VAL-011 | `bash scripts/ci/test-optimization-report.sh` | profile、matrix、cache、summary、release report 行为通过。 |
-| VAL-012 | `bash scripts/ci/validate-release-maintenance.sh` | release maintenance 约束通过。 |
-| VAL-013 | `ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"` | workflow YAML 均可解析。 |
-| VAL-014 | `find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n` | shell 脚本语法通过。 |
-| VAL-015 | `git diff --check` | 无 whitespace error。 |
+| VAL-004 | `bash scripts/ci/test-config-audit.sh` | 请求的 LuCI app、LuCI 依赖、Samba4/autosamba、性能能力和 x86 guardrails 通过。 |
+| VAL-005 | `bash scripts/ci/test-config-feeds.sh` | feeds、config fragments、files overlay、package overlay 加载行为正确。 |
+| VAL-006 | `bash scripts/ci/test-artifacts-release.sh` | artifact 与 release packaging 规则通过。 |
+| VAL-007 | `bash scripts/ci/test-smoke-x86.sh` | x86 smoke fixture 和 gzip warning 分类通过。 |
+| VAL-008 | `bash scripts/ci/validate-cache-key-policy.sh` | cache period、fallback、save 条件和隔离边界有效。 |
+| VAL-009 | `bash scripts/ci/validate-cache-maintenance.sh` | cache cleanup guardrails 有效。 |
+| VAL-010 | `bash scripts/ci/test-optimization-report.sh` | profile、matrix、cache、summary、release report 行为通过。 |
+| VAL-011 | `bash scripts/ci/validate-release-maintenance.sh` | release maintenance 约束通过。 |
+| VAL-012 | `ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f) }"` | workflow YAML 均可解析。 |
+| VAL-013 | `find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n` | shell 脚本语法通过。 |
+| VAL-014 | `git diff --check` | 无 whitespace error。 |
 
 ### 12.5 GitHub Actions 验证顺序
 

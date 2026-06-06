@@ -7,7 +7,7 @@
 核心目标：
 
 - 保证 `x86_64_LEDE`、`x86_64_immortalWrt` 优先稳定生成固件。
-- 在不移除必要插件的前提下，通过配置分层、审计和运行时默认值提升固件性能。
+- 在不移除必要插件的前提下，通过配置分层、审计和运行时默认值提升固件性能；`luci-app-alist` 已按用户确认移出必要插件集合。
 - 降低上游源码、feeds、包 overlay、GitHub Actions Cache 和 runner 变化对构建稳定性的影响。
 - 让每次优化都有可回溯证据：profile、源码 commit、配置审计、缓存命中、构建耗时、产物完整性。
 
@@ -16,7 +16,7 @@
 | 编号 | 约束 | 实施含义 |
 |------|------|----------|
 | CON-001 | profile 继续跟随上游分支。 | `devices/profiles.yml` 中的 `source_branch` 不做强制 pin；改为增加漂移报告与构建证据。 |
-| CON-002 | 插件是必要能力，不能通过移除插件解决问题。 | 优化方向放在配置分层、依赖审计、编译并行度、缓存与产物验证。 |
+| CON-002 | 插件是必要能力，不能通过移除插件解决问题；`luci-app-alist` 是本轮明确批准的例外。 | 优化方向放在配置分层、依赖审计、编译并行度、缓存与产物验证；后续插件增减以当前配置为准。 |
 | CON-003 | Samba4 和 autosamba 不需要共存。 | 保持 Samba4 优先，`autosamba` 必须禁用，并由配置审计阻止共存。 |
 | CON-004 | x86 固件优先。 | 先保障 `x86_64_LEDE` 和 `x86_64_immortalWrt`，再扩展到 Qualcommax profile。 |
 | CON-005 | GitHub Actions Cache 容量需要可控。 | 不用盲目扩大缓存；优先提高复用率、可观测性和清理边界。 |
@@ -93,7 +93,6 @@ bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-luci-zh-cn-config.sh
 bash scripts/ci/validate-passwall-overlay.sh
-bash scripts/ci/validate-plugin-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/optimization-report.sh summary "$PWD"
 ```

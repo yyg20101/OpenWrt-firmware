@@ -31,7 +31,7 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Validates cache key period and save policy.
   - Validates LuCI Simplified Chinese language policy.
   - Validates PassWall overlay policy.
-  - Validates required plugin overlay and source-specific placement policy.
+  - Validates PassWall overlay policy and source-specific config through profile and config-audit checks.
   - Validates optimization health summary generation.
 
 - `.github/workflows/optimization-health.yml`
@@ -69,7 +69,7 @@ ImmortalWrt's `luci` collection depends on `luci-light`; `luci-light` depends on
 
 PassWall remains an explicit overlay. `scripts/common/package` refreshes `Openwrt-Passwall/openwrt-passwall-packages` from `main` and pulls `Openwrt-Passwall/openwrt-passwall` through `UPDATE_PACKAGE_LATEST_TAG`, after removing conflicting local/feed directories.
 
-Required third-party LuCI apps that are not reliably present in the active official feeds are handled by `scripts/common/package` overlays. Shared required apps stay in `base.config`; LEDE-oriented apps such as OpenVPN stay in `lede-extra.config`. `scripts/ci/validate-plugin-overlay.sh` enforces that placement before a full firmware build starts.
+Third-party LuCI apps that are not reliably present in the active official feeds can be handled by `scripts/common/package` overlays. Shared requested apps stay in `base.config`; LEDE-oriented apps such as OpenVPN stay in `lede-extra.config`. The build keeps a generic requested-vs-effective LuCI app audit after `make defconfig`, while avoiding a fixed required-plugin overlay whitelist so future plugin additions do not need a second policy list.
 
 ## Profile Contract
 
@@ -229,7 +229,6 @@ bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-cache-key-policy.sh
 bash scripts/ci/validate-luci-zh-cn-config.sh
 bash scripts/ci/validate-passwall-overlay.sh
-bash scripts/ci/validate-plugin-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/optimization-report.sh summary "$PWD"
 ```

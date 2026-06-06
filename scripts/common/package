@@ -1,6 +1,5 @@
 case "${SOURCE_REPO:-}" in
   lede|immortalwrt|openwrt-6.x)
-  UPDATE_PACKAGE "luci-app-alist" "sbwml/luci-app-alist" "main" "all" "alist"
   UPDATE_PACKAGE "luci-app-gecoosac" "laipeng668/luci-app-gecoosac" "main" "all" "gecoosac"
   UPDATE_PACKAGE "luci-app-mini-diskmanager" "4IceG/luci-app-mini-diskmanager" "main" "all"
   UPDATE_PACKAGE "luci-app-partexp" "sirpdboy/luci-app-partexp" "main" "all"
