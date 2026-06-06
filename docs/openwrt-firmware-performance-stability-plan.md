@@ -93,6 +93,7 @@ bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-luci-zh-cn-config.sh
 bash scripts/ci/validate-passwall-overlay.sh
+bash scripts/ci/validate-plugin-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/optimization-report.sh summary "$PWD"
 ```

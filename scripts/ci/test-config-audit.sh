@@ -18,7 +18,10 @@ touch "${WORK_DIR}/files/etc/uci-defaults/99-performance-defaults"
 cat > "${OPENWRT_DIR}/Makefile" <<'EOF'
 .PHONY: defconfig
 defconfig:
-	@true
+	@if [ -n "$${DEFCONFIG_DROP_OPTION:-}" ]; then \
+		sed -i.bak "/^$${DEFCONFIG_DROP_OPTION}=y$$/d" .config; \
+		rm -f .config.bak; \
+	fi
 EOF
 
 mkdir -p "${OPENWRT_DIR}/scripts"
@@ -57,6 +60,11 @@ CONFIG_PACKAGE_kmod-ata-ahci=y
 CONFIG_PACKAGE_kmod-nvme=y
 CONFIG_PACKAGE_luci-app-samba4=y
 # CONFIG_PACKAGE_autosamba is not set
+CONFIG_PACKAGE_luci-app-alist=y
+CONFIG_PACKAGE_luci-app-msd_lite=y
+CONFIG_PACKAGE_luci-app-passwall=y
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y
+CONFIG_PACKAGE_luci-app-passwall_Nftables_Transparent_Proxy=y
 CONFIG_PACKAGE_wireguard-tools=y
 CONFIG_PACKAGE_luci-proto-wireguard=y
 CONFIG_PACKAGE_kmod-wireguard=y
@@ -83,6 +91,22 @@ EOF
 expect_pass() {
   write_config "${OPENWRT_DIR}/.config"
   bash "${ROOT_DIR}/scripts/ci/audit-config.sh" "${OPENWRT_DIR}" "${WORK_DIR}" "fixture-pass" >/dev/null
+  if ! grep -q "CONFIG_PACKAGE_luci-app-alist" "${WORK_DIR}/config-audit/summary.txt"; then
+    echo "ERROR: requested LuCI app summary omitted luci-app-alist" >&2
+    exit 1
+  fi
+  if ! grep -q "CONFIG_PACKAGE_luci-app-msd_lite" "${WORK_DIR}/config-audit/summary.txt"; then
+    echo "ERROR: requested LuCI app summary omitted luci-app-msd_lite" >&2
+    exit 1
+  fi
+  if grep -q "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray" "${WORK_DIR}/config-audit/summary.txt"; then
+    echo "ERROR: PassWall feature toggles must not be treated as standalone LuCI apps" >&2
+    exit 1
+  fi
+  if grep -q "CONFIG_PACKAGE_luci-app-passwall_Nftables_Transparent_Proxy" "${WORK_DIR}/config-audit/summary.txt"; then
+    echo "ERROR: PassWall transparent proxy toggles must not be treated as standalone LuCI apps" >&2
+    exit 1
+  fi
 }
 
 expect_fail_without() {
@@ -149,7 +173,29 @@ expect_fail_without_performance_overlay() {
   touch "${WORK_DIR}/files/etc/uci-defaults/99-performance-defaults"
 }
 
+expect_fail_when_defconfig_drops_luci_app() {
+  local option="$1"
+
+  write_config "${OPENWRT_DIR}/.config"
+  if DEFCONFIG_DROP_OPTION="${option}" bash "${ROOT_DIR}/scripts/ci/audit-config.sh" "${OPENWRT_DIR}" "${WORK_DIR}" "fixture-drop-${option}" >"${TMP_DIR}/audit.log" 2>&1; then
+    echo "ERROR: audit passed after defconfig dropped ${option}" >&2
+    exit 1
+  fi
+  if ! grep -q "lost requested LuCI application package" "${TMP_DIR}/audit.log"; then
+    echo "ERROR: expected requested LuCI app loss failure" >&2
+    cat "${TMP_DIR}/audit.log" >&2
+    exit 1
+  fi
+  if ! grep -q "${option} requested=y effective=unset" "${TMP_DIR}/audit.log"; then
+    echo "ERROR: expected audit failure to name ${option}" >&2
+    cat "${TMP_DIR}/audit.log" >&2
+    exit 1
+  fi
+}
+
 expect_pass
+expect_fail_when_defconfig_drops_luci_app "CONFIG_PACKAGE_luci-app-alist"
+expect_fail_when_defconfig_drops_luci_app "CONFIG_PACKAGE_luci-app-msd_lite"
 expect_fail_without "CONFIG_PACKAGE_uhttpd" "requires CONFIG_PACKAGE_uhttpd=y"
 expect_fail_without "CONFIG_PACKAGE_uhttpd-mod-ubus" "requires CONFIG_PACKAGE_uhttpd-mod-ubus=y"
 expect_fail_without "CONFIG_PACKAGE_rpcd-mod-luci" "requires CONFIG_PACKAGE_rpcd-mod-luci=y"

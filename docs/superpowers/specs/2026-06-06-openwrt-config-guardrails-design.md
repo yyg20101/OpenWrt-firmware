@@ -4,12 +4,13 @@
 
 **Problem Statement**: The firmware must keep user-required plugins and LuCI web access stable while following upstream OpenWrt/ImmortalWrt defaults wherever they are sufficient. Over-configuring LuCI runtime details or relying blindly on upstream defaults for known conflicts can create build drift, missing web UI components, or Samba integration conflicts.
 
-**Proposed Solution**: Adopt Strategy A: keep explicit guardrails only where they protect required behavior, and otherwise use upstream feed and LuCI collection defaults. Specifically, keep Samba4 enabled and `autosamba` explicitly disabled, preserve all currently enabled plugin selections, keep only `CONFIG_PACKAGE_luci=y` and `CONFIG_LUCI_LANG_zh_Hans=y` for LuCI, and verify the expanded defconfig result through CI.
+**Proposed Solution**: Adopt Strategy A: keep explicit guardrails only where they protect required behavior, and otherwise use upstream feed and LuCI collection defaults. Specifically, keep Samba4 enabled and `autosamba` explicitly disabled, preserve required plugins through shared or source-specific config fragments, keep OpenVPN in LEDE-only config, keep only `CONFIG_PACKAGE_luci=y` and `CONFIG_LUCI_LANG_zh_Hans=y` for LuCI, pull PassWall from the official PassWall overlay for all supported source trees, and verify the expanded defconfig result through CI.
 
 **Success Criteria**:
 
 - All enabled profiles keep every currently selected required plugin from `devices/*.config` and `scripts/common/config/*.config`.
 - If Samba4 is enabled, `CONFIG_PACKAGE_autosamba` must not be enabled in requested or effective config.
+- Requested LuCI application packages must not disappear after `make defconfig`; `config-audit/missing-luci-apps.txt` must be empty.
 - x86 config-audit artifacts show LuCI web availability: `luci-base`, at least one LuCI theme, `uHTTPd`, `uHTTPd ubus`, and `rpcd-mod-luci`.
 - x86 config-audit artifacts show Simplified Chinese support through `CONFIG_LUCI_LANG_zh_Hans=y` and `luci-i18n-base-zh-cn`.
 - `Firmware CI` with `target=x86_64_all` produces firmware artifacts whose checksums pass and whose smoke reports show `Static checks: passed`.
@@ -28,6 +29,7 @@
 - As the router administrator, I want the LuCI web interface, theme, uHTTPd bridge, rpcd LuCI module, and Simplified Chinese support to exist so that the firmware is manageable from the browser.
 - As the firmware owner, I want Samba4 to be present without autosamba so that file sharing does not depend on conflicting block hotplug behavior.
 - As the CI maintainer, I want official upstream defaults to provide LuCI internals where possible so that local config does not fight source-specific feed behavior.
+- As the firmware owner, I want source-specific plugins such as OpenVPN to remain in their matching source fragment so that each firmware keeps its upstream character instead of forcing every profile into the same package set.
 
 **Acceptance Criteria**:
 
@@ -36,7 +38,10 @@
 - `scripts/common/config/luci-zh-cn.config` contains only the official language selector `CONFIG_LUCI_LANG_zh_Hans=y` plus comments explaining the upstream LuCI language mechanism.
 - `scripts/common/config/samba.config` keeps `CONFIG_PACKAGE_luci-app-samba4=y` and `# CONFIG_PACKAGE_autosamba is not set`.
 - Current required third-party and LuCI application selections in `scripts/common/config/base.config`, `scripts/common/config/proxy.config`, `scripts/common/config/storage.config`, `scripts/common/config/usb-mobile.config`, and platform fragments remain present unless the user explicitly approves a later removal.
-- `scripts/ci/audit-config.sh` fails when LuCI web dependencies, LuCI Chinese, Samba4/autosamba policy, or required performance guardrails are missing from effective config.
+- `scripts/common/config/lede-extra.config` contains LEDE-oriented selections, including `luci-app-openvpn`; non-LEDE fragments do not request OpenVPN.
+- `scripts/common/package` overlays required third-party apps that are not reliably available from active official feeds, and applies the official PassWall dependency/app repositories to all supported source trees.
+- `scripts/ci/audit-config.sh` fails when requested LuCI application packages are removed by defconfig, or when LuCI web dependencies, LuCI Chinese, Samba4/autosamba policy, or required performance guardrails are missing from effective config.
+- `scripts/ci/validate-plugin-overlay.sh` fails when shared third-party overlay packages, LEDE-only package placement, or profile fragment boundaries drift.
 - The latest accepted x86 proof is `Firmware CI` run `27050273854` on commit `7a21daeddc8aa0391e7703473708b5f661e56296`, with artifacts downloaded to `/private/tmp/openwrt-artifacts-27050273854`.
 
 **Non-Goals**:
@@ -45,6 +50,7 @@
 - Do not make `autosamba` follow upstream defaults while Samba4 is required.
 - Do not hard-code every LuCI translation package or web runtime dependency in local config.
 - Do not remove currently enabled plugins to reduce image size, compile time, or cache use.
+- Do not force LEDE-only plugins such as OpenVPN into non-LEDE profiles.
 - Do not change runtime LuCI language defaults beyond selecting the official Simplified Chinese language build option.
 
 ## 3. AI System Requirements
@@ -52,7 +58,7 @@
 **Tool Requirements**:
 
 - Local repository inspection with `rg`, `git status`, and targeted file reads.
-- Local validators: `validate-profiles.sh`, `validate-luci-zh-cn-config.sh`, `validate-passwall-overlay.sh`, `test-config-audit.sh`, `test-config-feeds.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `validate-cache-key-policy.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, and `validate-release-maintenance.sh`.
+- Local validators: `validate-profiles.sh`, `validate-luci-zh-cn-config.sh`, `validate-passwall-overlay.sh`, `validate-plugin-overlay.sh`, `test-config-audit.sh`, `test-config-feeds.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `validate-cache-key-policy.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, and `validate-release-maintenance.sh`.
 - GitHub CLI access for `Firmware CI` run inspection, artifact inventory, and artifact download.
 - Artifact-level verification using `shasum -a 256 -c sha256sums.txt` and smoke/config-audit summaries.
 
@@ -81,10 +87,12 @@ Data flow:
 **Integration Points**:
 
 - `scripts/common/config/base.config`: required LuCI application and core package selections, including `CONFIG_PACKAGE_luci=y`.
+- `scripts/common/config/lede-extra.config`: LEDE-only plugin selections such as OpenVPN and other LEDE-oriented LuCI apps.
 - `scripts/common/config/luci-zh-cn.config`: official Simplified Chinese language selector.
 - `scripts/common/config/samba.config`: Samba4/autosamba policy.
 - `scripts/common/config/proxy.config` and `scripts/common/package`: proxy plugin selections and PassWall overlay source policy.
-- `scripts/ci/audit-config.sh`: effective config validation for LuCI, Samba4/autosamba, and performance guardrails.
+- `scripts/ci/audit-config.sh`: requested/effective config validation for LuCI apps, LuCI web, Samba4/autosamba, and performance guardrails.
+- `scripts/ci/validate-plugin-overlay.sh`: static guardrail for third-party plugin overlay sources and source-specific plugin placement.
 - `.github/workflows/firmware-ci.yml` and `.github/workflows/firmware-build.yml`: remote build and artifact proof.
 
 **Security & Privacy**:
@@ -116,7 +124,8 @@ The approved policy is **stable guardrails plus official dependency defaults**.
 |------|--------------|------------|
 | `autosamba` | Keep explicit disable because Samba4 is required and coexistence is not desired. | Requested config contains `# CONFIG_PACKAGE_autosamba is not set`; effective config summary reports `autosamba: n`. |
 | Samba4 | Keep `CONFIG_PACKAGE_luci-app-samba4=y`. | Requested and effective config report Samba4 enabled. |
-| Required plugins | Treat current enabled config selections as required. | Static profile audit and config-audit artifacts must not lose selected packages. |
+| Required plugins | Treat current enabled config selections as required, while respecting source-specific fragments. | Static profile audit, plugin overlay validator, and config-audit artifacts must not lose selected packages. |
+| Source-specific plugins | Keep OpenVPN and LEDE-oriented selections in `lede-extra.config`; do not request them from non-LEDE profiles. | `validate-plugin-overlay.sh` enforces fragment placement and profile boundaries. |
 | LuCI web | Keep only `CONFIG_PACKAGE_luci=y` locally. | Effective config must include `luci-base`, theme, `uhttpd`, `uhttpd-mod-ubus`, and `rpcd-mod-luci`. |
 | LuCI Chinese | Keep only `CONFIG_LUCI_LANG_zh_Hans=y` locally. | Effective config must include `luci-i18n-base-zh-cn`. |
 | Theme | Do not hard-code a theme if official LuCI collection provides one. | Effective config must include at least one `CONFIG_PACKAGE_luci-theme-*=y`; current x86 proof shows `luci-theme-bootstrap`. |
@@ -125,11 +134,14 @@ The approved policy is **stable guardrails plus official dependency defaults**.
 
 - `devices/profiles.yml` has 5 enabled profiles and all keep upstream-following `source_branch` values.
 - `scripts/common/config/samba.config` currently enables Samba4 and disables autosamba.
-- `scripts/common/config/base.config` currently includes `CONFIG_PACKAGE_luci=y` and required LuCI applications such as PassWall, HomeProxy, Samba4 via fragment, OpenVPN, ZeroTier, Alist, Docker/Dockerman, Diskman, DDNS-Go, UPnP, WireGuard, and related support packages.
+- `scripts/common/config/base.config` currently includes `CONFIG_PACKAGE_luci=y` and shared required LuCI applications such as PassWall, HomeProxy, ZeroTier, Alist, Docker/Dockerman, Diskman, DDNS-Go, UPnP, WireGuard, and related support packages.
+- `scripts/common/config/lede-extra.config` keeps LEDE-oriented applications, including OpenVPN, separate from non-LEDE profiles.
+- `scripts/common/package` now overlays required third-party packages from verified GitHub repositories and keeps the official PassWall package/app overlay for all supported source trees.
 - `scripts/common/config/luci-zh-cn.config` currently selects `CONFIG_LUCI_LANG_zh_Hans=y`.
 - `Firmware CI` run `27050273854` completed successfully for `x86_64_LEDE` and `x86_64_immortalWrt`.
 - Downloaded config-audit summaries for both x86 profiles confirm LuCI meta, LuCI Chinese, LuCI base zh-cn, Bootstrap theme, uHTTPd, uHTTPd ubus, rpcd LuCI, Samba4, autosamba disabled, WireGuard, BBR, SQM, and CAKE.
 - Downloaded firmware artifacts for both x86 profiles passed `shasum -a 256 -c sha256sums.txt`.
+- A stricter requested-vs-effective audit after run `27050273854` found several requested LuCI apps were dropped by defconfig; the current implementation adds overlay sources and audit checks so the next x86 run must prove they remain present.
 
 ## Review Checklist
 
@@ -138,3 +150,4 @@ The approved policy is **stable guardrails plus official dependency defaults**.
 - The document separates local intent from effective defconfig proof.
 - The document does not authorize plugin removal.
 - The document does not authorize replacing official LuCI dependency defaults with local hard-coding.
+- The document keeps source-specific plugins source-specific instead of forcing every profile to request LEDE-only applications.

@@ -215,10 +215,11 @@ UPDATE_PACKAGE() {
     echo "No suitable tag found (or AUTO_LATEST_TAG disabled), fallback ref: $branch_or_tag"
   fi
 
-  [ -d "./$repo_name" ] && rm -rf "./$repo_name"
-  run_with_retries "clone $pkg_repo@$branch_or_tag" git clone --depth=1 --single-branch --branch "$branch_or_tag" "https://github.com/$pkg_repo.git"
+  local clone_dir
+  clone_dir="$(mktemp -d ".update-package-${repo_name}.XXXXXX")"
+  run_with_retries "clone $pkg_repo@$branch_or_tag" git clone --depth=1 --single-branch --branch "$branch_or_tag" "https://github.com/$pkg_repo.git" "$clone_dir"
   local cloned_commit
-  cloned_commit="$(git -C "$repo_name" rev-parse HEAD)"
+  cloned_commit="$(git -C "$clone_dir" rev-parse HEAD)"
   echo "Package source: $pkg_name $pkg_repo $branch_or_tag $cloned_commit"
   record_package_source "$pkg_name" "$pkg_repo" "$branch_or_tag" "$cloned_commit" "$pkg_special"
 
@@ -238,13 +239,12 @@ UPDATE_PACKAGE() {
       [[ "$dir_name_lc" == *"$pkg_name_lc"* ]] || continue
       cp -rf "$dir" ./
       matched=1
-    done < <(find "./$repo_name" -mindepth 2 -maxdepth 5 -type f -name "Makefile" -print0 2>/dev/null || true)
+    done < <(find "$clone_dir" -mindepth 2 -maxdepth 5 -type f -name "Makefile" -print0 2>/dev/null || true)
     if [ "$matched" -ne 1 ]; then
       echo "ERROR: pkg mode enabled but no directory matched pattern '*$pkg_name*' in $repo_name" >&2
-      rm -rf "./$repo_name/"
+      rm -rf "$clone_dir"
       return 1
     fi
-    rm -rf "./$repo_name/"
   elif [[ "$pkg_special" == "all" ]]; then
     # Extract every top-level package directory that contains a Makefile.
     # 从大仓库中提取所有顶层 OpenWrt 包目录。
@@ -252,17 +252,35 @@ UPDATE_PACKAGE() {
     while IFS= read -r -d '' makefile; do
       cp -rf "$(dirname "$makefile")" ./
       copied=1
-    done < <(find "./$repo_name" -mindepth 2 -maxdepth 2 -type f -name "Makefile" -print0 2>/dev/null || true)
+    done < <(find "$clone_dir" -mindepth 2 -maxdepth 2 -type f -name "Makefile" -print0 2>/dev/null || true)
     if [ "$copied" -ne 1 ]; then
       echo "ERROR: all mode enabled but no top-level package Makefile found in $repo_name" >&2
-      rm -rf "./$repo_name/"
+      rm -rf "$clone_dir"
       return 1
     fi
-    rm -rf "./$repo_name/"
+  elif [[ "$pkg_special" == "root" ]]; then
+    # Treat repository root as the package directory.
+    # 将仓库根目录作为单个 OpenWrt 包目录复制。
+    if [ ! -f "${clone_dir}/Makefile" ]; then
+      echo "ERROR: root mode enabled but ${repo_name} root has no Makefile" >&2
+      rm -rf "$clone_dir"
+      return 1
+    fi
+    [ -e "$pkg_name" ] && rm -rf "$pkg_name"
+    mkdir -p "$pkg_name"
+    cp -a "${clone_dir}/." "$pkg_name/"
+    rm -rf "${pkg_name}/.git"
   elif [[ "$pkg_special" == "name" ]]; then
     [ -e "$pkg_name" ] && rm -rf "$pkg_name"
-    mv -f "$repo_name" "$pkg_name"
+    mv -f "$clone_dir" "$pkg_name"
+    clone_dir=""
+  else
+    [ -e "$repo_name" ] && rm -rf "$repo_name"
+    mv -f "$clone_dir" "$repo_name"
+    clone_dir=""
   fi
+
+  [ -z "${clone_dir:-}" ] || rm -rf "$clone_dir"
 }
 
 UPDATE_PACKAGE_LATEST_TAG() {
@@ -326,6 +344,6 @@ UPDATE_VERSION() {
 # Usage examples:
 # UPDATE_PACKAGE "OpenAppFilter" "destan19/OpenAppFilter" "master" "" "custom_name1 custom_name2"
 # UPDATE_PACKAGE "open-app-filter" "destan19/OpenAppFilter" "master" "" "luci-app-appfilter oaf"
-# UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg/name/all，可选"
-# UPDATE_PACKAGE_LATEST_TAG "包名" "项目地址" "回退分支" "pkg/name/all，可选"
+# UPDATE_PACKAGE "包名" "项目地址" "项目分支" "pkg/name/all/root，可选"
+# UPDATE_PACKAGE_LATEST_TAG "包名" "项目地址" "回退分支" "pkg/name/all/root，可选"
 # UPDATE_VERSION "sing-box"

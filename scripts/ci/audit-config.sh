@@ -66,6 +66,39 @@ require_file() {
   fi
 }
 
+requested_luci_app_options() {
+  local config_file="$1"
+
+  awk -F= '
+    $2 != "y" { next }
+    $1 !~ /^CONFIG_PACKAGE_luci-app-[A-Za-z0-9_.+-]+$/ { next }
+    $1 ~ /_INCLUDE_/ { next }
+    $1 ~ /_(Nftables|Iptables)_Transparent_Proxy$/ { next }
+    { print $1 }
+  ' "${config_file}" | sort -u
+}
+
+require_requested_luci_apps() {
+  local requested_config="${WORKSPACE}/config-audit/requested.config"
+  local missing_file="${WORKSPACE}/config-audit/missing-luci-apps.txt"
+  local option
+  local actual
+
+  : > "${missing_file}"
+  while IFS= read -r option; do
+    actual="$(config_value "${option}")"
+    if [ "${actual}" != "y" ]; then
+      printf '%s requested=y effective=%s\n' "${option}" "${actual:-unset}" >> "${missing_file}"
+    fi
+  done < <(requested_luci_app_options "${requested_config}")
+
+  if [ -s "${missing_file}" ]; then
+    echo "ERROR: ${PROFILE_ID} lost requested LuCI application package(s) after defconfig:" >&2
+    sed 's/^/  /' "${missing_file}" >&2
+    exit 1
+  fi
+}
+
 performance_defaults_overlay="${WORKSPACE}/files/etc/uci-defaults/99-performance-defaults"
 require_file "${performance_defaults_overlay}" "runtime performance defaults overlay"
 
@@ -83,6 +116,7 @@ else
 fi
 
 cp "${OPENWRT_PATH}/.config" "${WORKSPACE}/config-audit/effective.config"
+require_requested_luci_apps
 
 if [ "$(config_value CONFIG_TARGET_x86_64)" = "y" ]; then
   require_value CONFIG_TARGET_KERNEL_PARTSIZE 128
@@ -171,6 +205,8 @@ forbidden_enabled CONFIG_TARGET_PER_DEVICE_ROOTFS
   echo "rpcd luci: $(config_value CONFIG_PACKAGE_rpcd-mod-luci || true)"
   echo "LuCI themes:"
   awk -F= '/^CONFIG_PACKAGE_luci-theme-[A-Za-z0-9_.+-]+=y$/ { print "  " $1 }' "${OPENWRT_PATH}/.config" | sort
+  echo "Requested LuCI applications:"
+  requested_luci_app_options "${WORKSPACE}/config-audit/requested.config" | sed 's/^/  /'
 } > "${WORKSPACE}/config-audit/summary.txt"
 
 echo "Config audit passed for ${PROFILE_ID}."

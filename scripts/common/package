@@ -1,6 +1,17 @@
 case "${SOURCE_REPO:-}" in
   lede|immortalwrt|openwrt-6.x)
+  UPDATE_PACKAGE "luci-app-alist" "sbwml/luci-app-alist" "main" "all" "alist"
+  UPDATE_PACKAGE "luci-app-gecoosac" "laipeng668/luci-app-gecoosac" "main" "all" "gecoosac"
+  UPDATE_PACKAGE "luci-app-mini-diskmanager" "4IceG/luci-app-mini-diskmanager" "main" "all"
+  UPDATE_PACKAGE "luci-app-partexp" "sirpdboy/luci-app-partexp" "main" "all"
+  UPDATE_PACKAGE "luci-app-wolplus" "animegasan/luci-app-wolplus" "main" "root"
   UPDATE_PACKAGE "passwall-packages" "Openwrt-Passwall/openwrt-passwall-packages" "main" "all" "chinadns-ng dns2socks geoview hysteria ipt2socks microsocks naiveproxy shadow-tls shadowsocks-libev shadowsocks-rust shadowsocksr-libev simple-obfs sing-box tcping trojan-plus tuic-client v2ray-geodata v2ray-plugin xray-core xray-plugin"
   UPDATE_PACKAGE_LATEST_TAG "passwall" "Openwrt-Passwall/openwrt-passwall" "main" "pkg" "luci-app-passwall"
+  ;;
+esac
+
+case "${SOURCE_REPO:-}" in
+  lede)
+  UPDATE_PACKAGE "luci-app-mwan3helper" "kenzok8/small-package" "main" "pkg"
   ;;
 esac

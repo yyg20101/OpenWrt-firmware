@@ -75,6 +75,11 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-passwall-overlay.sh
 
+      - name: Validate Plugin Overlay Policy / 校验插件覆盖策略
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-plugin-overlay.sh
+
       - name: Validate Release Maintenance / 校验发布清理保护
         run: |
           set -euo pipefail
