@@ -9,7 +9,7 @@
 | High | Builds depend on mutable external sources: upstream repos, feeds, package repos, remote build environment script, and runner images. | `.github/workflows/firmware-build.yml`, `devices/profiles.yml`, `scripts/common/Packages.sh` | Builds may fail or produce different artifacts without local changes. | Pin more external refs; package overlay refs are now recorded when overlays run. |
 | Medium | `target=all` can trigger all enabled profiles in parallel. | `.github/workflows/firmware-ci.yml`, `devices/profiles.yml` | Actions minutes, cache quota, and release volume can spike. | Use profile groups for routine builds; multi-profile releases no longer overwrite GitHub Latest. |
 | Medium | Fixture tests still cover only selected shell module behavior. | `.github/workflows/ci-lint.yml`, `scripts/ci/*.sh` | Syntax/schema checks can pass while untested behavioral edge cases remain. | Extend fixtures to profile export and config fragment edge cases if those modules change further. |
-| Medium | Release tags are intentionally unique and not updated in place. | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` | Rebuilds create new releases rather than replacing old ones. | Use the manual Release Maintenance workflow with broad dry-run first, then a profile-specific tag prefix for real cleanup. |
+| Medium | Fixed Release tags replace assets in place. | `.github/workflows/firmware-build.yml`, `scripts/ci/release-maintenance.sh` | A successful rebuild becomes the current published asset set for that profile/source/branch. | Keep source commit, profile hash, and workflow run in the Release body; validate release assets before treating a build as accepted. |
 
 ### 2) Technical Debt
 
@@ -48,8 +48,7 @@
 ### 6) `[ASK USER]` Questions
 
 1. [ASK USER] Should repository dispatch be limited to specific automation sources, or is any caller with repo dispatch permission acceptable?
-2. [ASK USER] What profile-specific Release retention count should be used operationally when running manual cleanup?
-3. [ASK USER] Should package overlay refs be pinned for reproducible builds, or is “latest with recorded refs” package behavior desired?
+2. [ASK USER] Should package overlay refs be pinned for reproducible builds, or is “latest with recorded refs” package behavior desired?
 
 ### 7) Evidence
 

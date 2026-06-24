@@ -326,5 +326,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: ${{ steps.artifacts.outputs.firmware_path }}/*
           bodyFile: ${{ steps.release.outputs.release_body_file }}
-          allowUpdates: false
+          allowUpdates: true
+          removeArtifacts: true
+          replacesArtifacts: true
           makeLatest: ${{ inputs.make_latest }}

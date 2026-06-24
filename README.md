@@ -141,13 +141,13 @@ PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt
 - artifact 文件名和大小表
 - Packages.tar.gz 内插件/包文件数量和清单
 
-Release tag 格式：
+Release name 固定为 `<profile title> / <source repo>:<branch>`，例如 `x86_64 LEDE / lede:master`。Release tag 固定为：
 
 ```text
-firmware-<profile>-<source>-<branch>-<commit>-run<run-number>
+firmware-<profile>-<source-slug>-<branch>
 ```
 
-单 profile 发布会被标记为 GitHub Latest；分组或 `all` 发布会创建独立 Release，但不会让最后完成的 profile 抢占 Latest。
+例如 `firmware-x86_64_LEDE-coolsnowwolf_lede-master`。同一 profile/source/branch 的后续成功构建会更新同一个 Release 并替换旧 assets；当前 source commit、profile hash 和 workflow run 仍记录在 Release body 中。单 profile 发布会被标记为 GitHub Latest；分组或 `all` 发布会更新对应 Release，但不会让最后完成的 profile 抢占 Latest。
 
 ## Firmware Verification
 

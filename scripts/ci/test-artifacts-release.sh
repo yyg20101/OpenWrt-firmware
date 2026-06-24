@@ -114,6 +114,11 @@ assert_match 'Openwrt-Passwall/openwrt-passwall' "${WORK_DIR}/release-body.md"
 assert_match 'feature\\\|pipe' "${WORK_DIR}/release-body.md"
 assert_match '## Build Environment' "${WORK_DIR}/release-body.md"
 assert_match 'https://example.invalid/init.sh' "${WORK_DIR}/release-body.md"
+assert_match '^release_name<<' "${TMP_DIR}/release_out"
+assert_match '^x86_64 Fixture / fixture:main$' "${TMP_DIR}/release_out"
+assert_match '^release_tag<<' "${TMP_DIR}/release_out"
+assert_match '^firmware-x86_64_fixture-fixture-main$' "${TMP_DIR}/release_out"
+assert_no_match 'abcdef12|run1' "${TMP_DIR}/release_out"
 
 mkdir -p "${OPENWRT_DIR}/package/feeds/test/failure"
 cat > "${OPENWRT_DIR}/Makefile" <<'EOF'

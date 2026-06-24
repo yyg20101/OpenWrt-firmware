@@ -175,6 +175,8 @@ Default firmware verification uses the Release, not a full local download of the
 5. Download a small asset such as `openwrt-x86-64-generic-kernel.bin` and run `shasum -a 256 -c sha256sums.txt --ignore-missing` to prove the checksum path.
 6. Download full firmware images only for flash testing or targeted forensic checks.
 
+Release names and tags are stable per profile/source/branch. For example, `x86_64 LEDE / lede:master` uses `firmware-x86_64_LEDE-coolsnowwolf_lede-master`; a later successful build updates the same Release, removes old assets, uploads the new assets, and leaves the exact source commit and workflow run in the body.
+
 ## CI Script Modules
 
 - `scripts/ci/profiles.sh`
@@ -208,7 +210,7 @@ Default firmware verification uses the Release, not a full local download of the
   - Detects default LAN IP and root password state from source/rootfs outputs.
 
 - `scripts/ci/release-maintenance.sh`
-  - Generates standardized Release name, tag, body file, and action outputs.
+  - Generates stable Release name, tag, body file, and action outputs.
   - Adds package archive and package source manifest details to the Release body when present.
 
 - `scripts/ci/optimization-report.sh`

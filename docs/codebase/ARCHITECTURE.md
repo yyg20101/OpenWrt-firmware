@@ -60,7 +60,7 @@ workflow_dispatch/repository_dispatch
 
 - Upstream OpenWrt sources, feeds, package repos, and the remote build environment script are mutable external dependencies.
 - `target=all` can consume significant GitHub Actions minutes and cache quota.
-- Release tags are intentionally unique and `allowUpdates=false`; rerunning the same source/profile/run combination can require a new workflow run number. Only single-profile publishes are marked GitHub Latest.
+- Release tags are stable per profile/source/branch; successful rebuilds update the same Release and replace assets. Only single-profile publishes are marked GitHub Latest.
 
 ### 6) Evidence
 

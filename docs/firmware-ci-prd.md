@@ -85,4 +85,4 @@
   - GitHub runner image changes can break OpenWrt build prerequisites.
   - Upstream feeds/package repositories can change without local commits.
   - `target=all` can consume significant Actions minutes and cache quota.
-  - Release publishing may fail if a tag already exists because releases are intentionally not updated in place.
+  - Fixed Release tags mean the latest successful rebuild replaces the published asset set for that profile/source/branch, so verification must check asset digest, `sha256sums.txt`, and a small downloaded asset before acceptance.

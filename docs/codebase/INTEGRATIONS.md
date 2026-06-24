@@ -22,7 +22,7 @@
 |------|------|--------------|----------|----------|
 | GitHub Actions cache | Build acceleration. | `actions/cache@v5`; cleanup through GitHub REST API in `actions/github-script@v8`. | Cache key churn or stale toolchain artifacts can affect build time/correctness; real deletion requires `prefix` or `ref`. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
 | GitHub Artifacts | Compile logs and firmware outputs. | `actions/upload-artifact@v7`. | Retention is 14 days. | `.github/workflows/firmware-build.yml` |
-| GitHub Releases | Optional firmware distribution. | `ncipollo/release-action@v1`; filtered cleanup through GitHub REST API in `actions/github-script@v8`. | Release tags are unique and not updated in place; only single-profile publishes become GitHub Latest. | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
+| GitHub Releases | Optional firmware distribution. | `ncipollo/release-action@v1`; filtered cleanup through GitHub REST API in `actions/github-script@v8`. | Release tags are stable per profile/source/branch and successful rebuilds replace the current asset set; only single-profile publishes become GitHub Latest. | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
 
 ### 3) Secrets and Credentials Handling
 
@@ -37,6 +37,7 @@
 - x86 profiles include Intel/AMD microcode for CPU errata mitigation.
 - Release publishing is disabled by default and optional via `release=true`.
 - Multi-profile publishing does not update the GitHub Latest release marker.
+- A successful rebuild updates the existing profile/source/branch Release and replaces old Release assets.
 - Cache maintenance defaults to dry-run and refuses real deletion unless `prefix` or `ref` narrows the scope.
 - The update-checker and cleanup workflows were removed from the default architecture to reduce hidden side effects.
 - Runner package installation, build environment script download, source clone, feeds update/install, and package overlay GitHub operations use retry/backoff wrappers.

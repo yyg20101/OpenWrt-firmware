@@ -28,9 +28,7 @@ prepare_release_metadata() {
   local source_slug="${SOURCE_SLUG:-${source_repo}}"
   local repo_branch="${REPO_BRANCH:-unknown-branch}"
   local firmware_tag="${FIRMWARE_TAG:-unknown-platform}"
-  local wrt_hash="${WRT_HASH:-unknown}"
   local profile_hash="${PROFILE_HASH:-unknown}"
-  local run_number="${GITHUB_RUN_NUMBER:-0}"
   local default_ip="${DEFAULT_IP:-unknown}"
   local default_ip_source="${DEFAULT_IP_SOURCE:-n/a}"
   local default_password="${DEFAULT_PASSWORD:-unknown}"
@@ -65,8 +63,8 @@ prepare_release_metadata() {
   profile_slug="$(printf '%s' "${profile_id}" | sanitize)"
   source_slug_safe="$(printf '%s' "${source_slug}" | sanitize)"
   branch_slug="$(printf '%s' "${repo_branch}" | sanitize)"
-  release_tag="firmware-${profile_slug}-${source_slug_safe}-${branch_slug}-${wrt_hash}-run${run_number}"
-  release_name="${profile_title} / ${source_repo}:${repo_branch} / ${wrt_hash}"
+  release_tag="firmware-${profile_slug}-${source_slug_safe}-${branch_slug}"
+  release_name="${profile_title} / ${source_repo}:${repo_branch}"
 
   {
     echo "| File | Size |"
