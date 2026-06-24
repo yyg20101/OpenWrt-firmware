@@ -152,7 +152,7 @@ Optimization Health
 Use this flow before each optimization pass. The intended loop is:
 
 ```text
-health report -> config audit -> firmware build -> artifact verification -> cache maintenance dry-run
+health report -> config audit -> firmware build with release=true -> Release asset verification -> cache maintenance dry-run
 ```
 
 Recommended operating order:
@@ -160,7 +160,16 @@ Recommended operating order:
 1. Run `Optimization Health` first so profile drift, cache grouping, and matrix shape are visible before any build.
 2. Run `Firmware CI` for `target=x86_64_all` next and inspect both x86 profiles before widening to other targets.
 3. Run `Cache Maintenance` in dry-run mode before any real cache cleanup, and only delete within a bounded `prefix` or `ref`.
-4. Use `release=true` only for a single selected profile when a GitHub Release is intended to become the latest release.
+4. For firmware output validation, pass `release=true` by default so the successful build exercises the Release asset upload path. Prefer a single selected profile for final publish verification; grouped targets may publish Release assets, but they do not take GitHub Latest.
+
+Default firmware verification uses the Release, not a full local download of the multi-GB firmware artifact:
+
+1. Confirm the run and build job conclude `success`, including `Upload Firmware Artifact`, `Smoke X86 Artifact`, and `Publish GitHub Release`.
+2. Download small diagnostic artifacts (`config-audit-*`, `compile-log-*`, `smoke-x86-*`) and verify config audit, compile log, and smoke summary.
+3. Inspect Release assets with `gh release view <tag> --json assets`.
+4. Compare firmware asset `digest` values from GitHub with the entries in `sha256sums.txt`.
+5. Download a small asset such as `openwrt-x86-64-generic-kernel.bin` and run `shasum -a 256 -c sha256sums.txt --ignore-missing` to prove the checksum path.
+6. Download full firmware images only for flash testing or targeted forensic checks.
 
 ## CI Script Modules
 
@@ -221,6 +230,7 @@ Recommended operating order:
 - Keep cache deletion workflows filtered by `prefix` or `ref`; dry-run is the only broad mode.
 - Keep cache keys isolated by source slug, source branch, and `cache_group`; save only when no matched cache key exists.
 - Treat `x86_64_all` as the preferred preflight target for build and smoke validation before broader profile groups.
+- Treat `release=true` as the default for firmware artifact validation so Release assets, asset digests, `sha256sums.txt`, and small-asset checksum checks are exercised.
 - Run local validation before pushing:
 
 ```bash

@@ -433,12 +433,12 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 | Step | Command | Required Evidence |
 |------|---------|-------------------|
 | GHA-001 | `gh workflow run optimization-health.yml --repo yyg20101/OpenWrt-firmware --ref main` | profile drift、matrix、cache health 成功生成。 |
-| GHA-002 | `gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=x86_64_all -f release=false` | `x86_64_LEDE` 与 `x86_64_immortalWrt` 两个 job 均 success。 |
-| GHA-003 | `gh run download <run_id> --repo yyg20101/OpenWrt-firmware --dir /private/tmp/openwrt-artifacts-<run_id>` | 下载 firmware、compile-log、config-audit、smoke artifacts。 |
-| GHA-004 | 在每个 firmware artifact 目录运行 `shasum -a 256 -c sha256sums.txt` | checksum 全部通过。 |
+| GHA-002 | `gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=<profile> -f release=true` | 后续固件测试验证默认开启 Release 上传；compile、firmware artifact、smoke、Release publish 均 success。 |
+| GHA-003 | `gh run download <run_id> --repo yyg20101/OpenWrt-firmware --dir /private/tmp/openwrt-artifacts-<run_id> -p 'config-audit-*' -p 'compile-log-*' -p 'smoke-x86-*'` | 下载小型诊断 artifacts；完整 firmware artifact 不再作为默认下载前置条件。 |
+| GHA-004 | `gh release view <tag> --repo yyg20101/OpenWrt-firmware --json assets` and download `sha256sums.txt` plus one small asset | Release asset digest 与 `sha256sums.txt` 对齐；小资产实际下载后 `shasum -a 256 -c sha256sums.txt --ignore-missing` 通过。 |
 | GHA-005 | 检查 config audit summary | `missing-luci-apps.txt` 为空；LuCI Chinese、uHTTPd、rpcd、theme、Samba4/autosamba、BBR、SQM、CAKE、performance overlay 全部符合预期。 |
 | GHA-006 | 检查 smoke summary | `Static checks: passed`，并出现 `Boot status: boot-visible` 或等价早期启动证据。 |
-| GHA-007 | `gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=qualcommax_all -f release=false` | x86 通过后再扩展；失败时下载 failure-context 并归因。 |
+| GHA-007 | `gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=qualcommax_all -f release=true` | x86 通过后再扩展；成功时验证 Release assets，失败时下载 failure-context 并归因。 |
 | GHA-008 | `gh workflow run cache-maintenance.yml --repo yyg20101/OpenWrt-firmware --ref main -f dry_run=true -f older_than_days=0 -f keep_latest=1 -f ref=refs/heads/main` | 只输出候选，不删除；如需真实删除，必须另行获得用户确认。 |
 
 ### 12.6 产物验收标准
@@ -447,7 +447,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 - **ART-002**: compile-log artifact 必须包含可追踪的完整日志或失败尾部上下文。
 - **ART-003**: config-audit artifact 必须包含 requested config、effective config、summary、`missing-luci-apps.txt` 和关键能力状态。
 - **ART-004**: smoke artifact 必须包含 `summary.txt`、`partition-table.txt`、`qemu.log`、`image.raw` 或等价诊断文件。
-- **ART-005**: release assets 必须保留 `Packages.tar.gz`，排除 VM-only image formats，并保留 checksum/manifest。
+- **ART-005**: release assets 必须保留 `Packages.tar.gz`，排除 VM-only image formats，并保留 checksum/manifest；默认验收通过 Release asset digest、`sha256sums.txt` 和一个小资产实际下载校验完成。
 - **ART-006**: package source manifest 必须能追溯本地 overlay、PassWall、依赖包仓库、ref/tag 和 commit。
 
 ### 12.7 调优方向与实施边界
@@ -465,14 +465,15 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 2. 如果 `Firmware CI` 配置阶段失败，下载 `config-audit-*` artifact，先检查 fragments、feeds、LuCI 中文、Samba4/autosamba 和 PassWall overlay。
 3. 如果编译阶段失败，查看 `compile-log-*` 与 `failure-context-*`，归类为上游源码、feed 包、overlay 包、runner 资源、cache 污染或本地 config。
 4. 如果 smoke 阶段失败，检查 gzip、partition、QEMU boot log；已知 harmless warning 必须精确匹配，未知 warning 保持失败。
-5. 如果 cache 容量接近上限，先运行 Optimization Health 和 Cache Maintenance dry-run；只有用户确认后才执行真实删除。
-6. 如果 Qualcommax 失败，不回滚 x86 已验证配置；先记录失败 profile、source commit、rootfs pressure、failed package，再决定是否拆分 platform fragment。
+5. 如果完整 firmware artifact 下载出现 transient EOF，优先通过 Release asset digest、`sha256sums.txt`、小资产实际下载 checksum 继续验收；只有 flash 测试或取证需要时再重试完整镜像下载。
+6. 如果 cache 容量接近上限，先运行 Optimization Health 和 Cache Maintenance dry-run；只有用户确认后才执行真实删除。
+7. 如果 Qualcommax 失败，不回滚 x86 已验证配置；先记录失败 profile、source commit、rootfs pressure、failed package，再决定是否拆分 platform fragment。
 
 ### 12.9 完成定义
 
 - **DONE-001**: `main` 分支本地 validator 全部通过。
 - **DONE-002**: `target=x86_64_all` 最新 GitHub Actions run 成功，两个 x86 profile 均有完整 artifact。
-- **DONE-003**: firmware artifact checksum 通过，smoke summary 通过，config audit summary 通过。
+- **DONE-003**: Release asset digest 与 `sha256sums.txt` 对齐，小资产 checksum 通过，smoke summary 通过，config audit summary 通过。
 - **DONE-004**: cache health 能解释当前缓存数量、大小、命中、fallback 和候选清理项。
 - **DONE-005**: 计划文档记录最新 commit、run URL、artifact 验收路径和结论。
 - **DONE-006**: 后续扩展到 Qualcommax 时，有同等 artifact 和 failure-context 证据。

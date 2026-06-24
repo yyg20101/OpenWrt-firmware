@@ -122,7 +122,7 @@ PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt
 2. 先触发 `Firmware CI` 的 `target=x86_64_all`，确认两个 x86 profile 生成 artifact 并通过 x86 smoke。
 3. x86 稳定后再触发 `target=qualcommax_all` 或 `target=all`。
 4. Cache 接近容量上限时，先运行 `Cache Maintenance` dry-run；真实删除必须指定 `prefix` 或 `ref`，并保留匹配范围内最新缓存。
-5. 需要发布固件时，对单个 profile 使用 `release=true`；分组或 `all` 发布不会抢占 GitHub Latest。
+5. 后续需要验收固件产物的 `Firmware CI` 测试默认传入 `release=true`，让成功结果走 Release asset 上传路径；优先对单个 profile 做最终发布验证，分组或 `all` 发布不会抢占 GitHub Latest。
 
 ## Release Contract
 
@@ -145,6 +145,18 @@ firmware-<profile>-<source>-<branch>-<commit>-run<run-number>
 ```
 
 单 profile 发布会被标记为 GitHub Latest；分组或 `all` 发布会创建独立 Release，但不会让最后完成的 profile 抢占 Latest。
+
+## Firmware Verification
+
+后续固件测试验证默认开启 Release 上传，并以 Release 资产为主要验收来源。不要把完整 firmware artifact 下载作为默认前置条件；大文件下载可作为补充抽检。
+
+默认验证顺序：
+
+1. 用 `gh run view <run_id>` 确认 `Configure Firmware`、`Download Dependencies`、`Compile Firmware`、`Upload Firmware Artifact`、`Smoke X86 Artifact`、`Publish GitHub Release` 均成功。
+2. 下载并检查较小的 `config-audit-*`、`compile-log-*`、`smoke-x86-*` artifacts，确认 `missing-luci-apps.txt` 为空、compile log 无失败包、smoke summary 为 `Static checks: passed`。
+3. 用 `gh release view <tag> --json assets` 检查 Release assets，确认固件镜像、`Packages.tar.gz`、manifest、provenance、`sha256sums.txt` 均已上传。
+4. 将 Release asset `digest` 与 `sha256sums.txt` 中对应文件的 sha256 对齐验证。
+5. 实际下载一个小资产，例如 `openwrt-x86-64-generic-kernel.bin`，运行 `shasum -a 256 -c sha256sums.txt --ignore-missing`，确认 checksum 流程可用。
 
 ## Documentation
 
