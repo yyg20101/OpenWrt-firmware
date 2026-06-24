@@ -1,3 +1,11 @@
+KENZOK8_SMALL_PACKAGES="brook chinadns-ng clashoo dae daed dns2socks dns2socks-rust dns2tcp geoview gn hysteria ipt2socks lua-neturl luci-app-clashoo luci-app-daede luci-app-fchomo luci-app-homeproxy luci-app-momo luci-app-mosdns luci-app-nikki luci-app-openclash luci-app-passwall luci-app-passwall2 luci-app-ssr-plus microsocks mihomo momo mosdns naiveproxy nikki pdnsd-alt redsocks2 shadow-tls shadowsocks-libev shadowsocks-rust shadowsocksr-libev simple-obfs sing-box ssocks tcping trojan trojan-go trojan-plus tuic-client v2dat v2ray-core v2ray-geodata v2ray-plugin v2raya xray-core xray-plugin"
+
+case "${SOURCE_REPO:-}" in
+  lede)
+  UPDATE_PACKAGE "small" "kenzok8/small" "master" "all" "${KENZOK8_SMALL_PACKAGES}"
+  ;;
+esac
+
 case "${SOURCE_REPO:-}" in
   lede|immortalwrt|openwrt-6.x)
   UPDATE_PACKAGE "luci-app-gecoosac" "laipeng668/luci-app-gecoosac" "main" "all" "gecoosac"

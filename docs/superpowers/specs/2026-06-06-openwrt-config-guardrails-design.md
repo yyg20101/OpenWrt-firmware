@@ -135,7 +135,7 @@ The approved policy is **stable guardrails plus official dependency defaults**.
 - `scripts/common/config/samba.config` currently enables Samba4 and disables autosamba.
 - `scripts/common/config/base.config` currently includes `CONFIG_PACKAGE_luci=y` and shared requested LuCI applications such as PassWall, HomeProxy, ZeroTier, Docker/Dockerman, Diskman, DDNS-Go, UPnP, WireGuard, and related support packages. `luci-app-alist` has been intentionally removed from the requested set.
 - `scripts/common/config/lede-extra.config` keeps LEDE-oriented applications, including OpenVPN, separate from non-LEDE profiles.
-- `scripts/common/package` overlays selected third-party packages from GitHub repositories and keeps the official PassWall package/app overlay for all supported source trees, without a separate fixed plugin whitelist validator.
+- `scripts/common/package` seeds LEDE builds from `kenzok8/small@master`, overlays selected third-party packages from GitHub repositories, and keeps the official PassWall package/app overlay for all supported source trees, without a separate fixed plugin whitelist validator.
 - `scripts/common/config/luci-zh-cn.config` currently selects `CONFIG_LUCI_LANG_zh_Hans=y`.
 - `Firmware CI` run `27050273854` completed successfully for `x86_64_LEDE` and `x86_64_immortalWrt`.
 - Downloaded config-audit summaries for both x86 profiles confirm LuCI meta, LuCI Chinese, LuCI base zh-cn, Bootstrap theme, uHTTPd, uHTTPd ubus, rpcd LuCI, Samba4, autosamba disabled, WireGuard, BBR, SQM, and CAKE.

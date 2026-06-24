@@ -96,6 +96,7 @@ bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-cache-key-policy.sh
 bash scripts/ci/validate-luci-zh-cn-config.sh
 bash scripts/ci/validate-passwall-overlay.sh
+bash scripts/ci/validate-lede-small-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 ```
 

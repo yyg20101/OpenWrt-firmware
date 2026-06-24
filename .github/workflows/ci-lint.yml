@@ -75,6 +75,11 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-passwall-overlay.sh
 
+      - name: Validate LEDE Small Overlay Policy / 校验 LEDE Small 覆盖策略
+        run: |
+          set -euo pipefail
+          bash scripts/ci/validate-lede-small-overlay.sh
+
       - name: Validate Release Maintenance / 校验发布清理保护
         run: |
           set -euo pipefail

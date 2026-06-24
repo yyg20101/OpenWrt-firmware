@@ -67,7 +67,9 @@ LuCI Chinese support follows upstream LuCI rules. The shared fragment selects `C
 
 ImmortalWrt's `luci` collection depends on `luci-light`; `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`. The Bootstrap theme installs its own default `main.mediaurlbase`, and `luci-base` depends on `rpcd`/`rpcd-mod-luci` and adds the uHTTPd LuCI ucode handler through its post-install script. Local config therefore avoids hard-coding LuCI runtime/library dependencies and audits those defaults instead of replacing them.
 
-PassWall remains an explicit overlay. `scripts/common/package` refreshes `Openwrt-Passwall/openwrt-passwall-packages` from `main` and pulls `Openwrt-Passwall/openwrt-passwall` through `UPDATE_PACKAGE_LATEST_TAG`, after removing conflicting local/feed directories.
+LEDE builds first seed the local package tree from `kenzok8/small` `master` in `all` mode, after removing matching local/feed package directories for that repository's package set. This supplies LEDE-oriented proxy packages such as SSR Plus, OpenClash, HomeProxy, Mihomo/MosDNS/Nikki, and related dependencies without applying the same feed to ImmortalWrt-family profiles.
+
+PassWall remains an explicit shared overlay after the LEDE `kenzok8/small` seed. `scripts/common/package` refreshes `Openwrt-Passwall/openwrt-passwall-packages` from `main` and pulls `Openwrt-Passwall/openwrt-passwall` through `UPDATE_PACKAGE_LATEST_TAG`, after removing conflicting local/feed directories.
 
 Third-party LuCI apps that are not reliably present in the active official feeds can be handled by `scripts/common/package` overlays. Shared requested apps stay in `base.config`; LEDE-oriented apps such as OpenVPN stay in `lede-extra.config`. The build keeps a generic requested-vs-effective LuCI app audit after `make defconfig`, while avoiding a fixed required-plugin overlay whitelist so future plugin additions do not need a second policy list.
 
