@@ -13,10 +13,12 @@ This repository uses a declarative profile + reusable workflow structure for fir
 ## Entry Workflows
 
 - `.github/workflows/firmware-ci.yml`
+  - Scheduled entry every day at 20:00 UTC / 04:00 Asia/Shanghai.
   - Manual entry through `workflow_dispatch`.
   - Optional automation entry through `repository_dispatch` with event type `firmware-ci`.
   - Resolves `target` into a build matrix by calling `scripts/ci/profiles.sh matrix`.
   - Accepts `target=<profile-id>`, profile groups, or `target=all`.
+  - Scheduled runs default to `target=x86_64_all` and `release=true`.
   - Marks published releases as GitHub Latest only when one profile is selected.
 
 - `.github/workflows/firmware-build.yml`
@@ -161,6 +163,8 @@ Recommended operating order:
 2. Run `Firmware CI` for `target=x86_64_all` next and inspect both x86 profiles before widening to other targets.
 3. Run `Cache Maintenance` in dry-run mode before any real cache cleanup, and only delete within a bounded `prefix` or `ref`.
 4. For firmware output validation, pass `release=true` by default so the successful build exercises the Release asset upload path. Prefer a single selected profile for final publish verification; grouped targets may publish Release assets, but they do not take GitHub Latest.
+
+Daily scheduled builds follow the same release-verification path automatically. They build `x86_64_all` with `release=true`, covering the two stable x86 profiles while avoiding a daily full-platform Actions and Release asset load.
 
 Default firmware verification uses the Release, not a full local download of the multi-GB firmware artifact:
 

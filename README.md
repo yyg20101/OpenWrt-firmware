@@ -9,6 +9,7 @@
   - 手动触发参数：
     - `target`: 下拉选择单个 profile、`x86_64_all`、`qualcommax_all` 或 `all`
     - `release`: 是否发布 GitHub Release，默认不发布
+  - 定时触发：每日 04:00 Asia/Shanghai 自动构建 `x86_64_all`，并默认 `release=true`
   - 事件触发：`repository_dispatch`，事件类型为 `firmware-ci`
   - 只有单 profile 发布会标记为 GitHub Latest；分组或 `all` 发布不会覆盖 Latest 标记。
 
@@ -123,6 +124,8 @@ PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt
 3. x86 稳定后再触发 `target=qualcommax_all` 或 `target=all`。
 4. Cache 接近容量上限时，先运行 `Cache Maintenance` dry-run；真实删除必须指定 `prefix` 或 `ref`，并保留匹配范围内最新缓存。
 5. 后续需要验收固件产物的 `Firmware CI` 测试默认传入 `release=true`，让成功结果走 Release asset 上传路径；优先对单个 profile 做最终发布验证，分组或 `all` 发布不会抢占 GitHub Latest。
+
+每日自动构建由 `Firmware CI` 的 `schedule` 触发，默认构建 `x86_64_all` 并发布 Release assets。该任务用于持续验证 x86 LEDE 与 x86 ImmortalWrt 两个稳定 profile；Qualcommax 和 `all` 仍按需手动触发。
 
 ## Release Contract
 

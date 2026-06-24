@@ -1,7 +1,10 @@
 name: Firmware CI
-run-name: Firmware CI / ${{ github.event.inputs.target || github.event.client_payload.target || 'x86_64_immortalWrt' }}
+run-name: Firmware CI / ${{ github.event.inputs.target || github.event.client_payload.target || github.event_name == 'schedule' && 'x86_64_all' || 'x86_64_immortalWrt' }}
 
 on:
+  schedule:
+    # Daily 04:00 Asia/Shanghai.
+    - cron: "0 20 * * *"
   workflow_dispatch:
     inputs:
       target:
@@ -47,6 +50,7 @@ jobs:
       - name: Resolve Target
         id: resolve
         env:
+          EVENT_NAME: ${{ github.event_name }}
           INPUT_TARGET: ${{ github.event.inputs.target }}
           INPUT_RELEASE: ${{ github.event.inputs.release }}
           PAYLOAD_TARGET: ${{ github.event.client_payload.target }}
@@ -54,8 +58,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          target="${INPUT_TARGET:-${PAYLOAD_TARGET:-x86_64_immortalWrt}}"
-          release_raw="${INPUT_RELEASE:-${PAYLOAD_RELEASE:-false}}"
+          default_target="x86_64_immortalWrt"
+          default_release="false"
+          if [ "${EVENT_NAME}" = "schedule" ]; then
+            default_target="x86_64_all"
+            default_release="true"
+          fi
+
+          target="${INPUT_TARGET:-${PAYLOAD_TARGET:-${default_target}}}"
+          release_raw="${INPUT_RELEASE:-${PAYLOAD_RELEASE:-${default_release}}}"
 
           case "${release_raw}" in
             true|TRUE|True|1|yes|YES|Yes) release="true" ;;
