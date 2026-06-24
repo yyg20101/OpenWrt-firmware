@@ -4,7 +4,7 @@
 
 **Goal:** Remove `gecoosac` from the required firmware set so `x86_64_LEDE` can build and publish without maintaining the broken external `laipeng668/luci-app-gecoosac` overlay.
 
-**Architecture:** Treat `gecoosac` as a removed optional capability, not as a package-source bug to patch locally. The fix removes the config request and overlay source, then adds a small validator so the package is not reintroduced accidentally while keeping `kenzok8/small`, PassWall, HomeProxy, LuCI Chinese, Samba4, SQM, and x86 guardrails unchanged.
+**Architecture:** Treat `gecoosac` as a removed optional capability, not as a package-source bug to patch locally. The fix removes the config request and overlay source, then relies on the firmware source defaults and the existing requested-vs-effective config audit while keeping `kenzok8/small`, PassWall, HomeProxy, LuCI Chinese, Samba4, SQM, and x86 guardrails unchanged.
 
 **Tech Stack:** Bash CI scripts, OpenWrt `.config` fragments, GitHub Actions workflows, `gh` CLI.
 
@@ -14,9 +14,6 @@
 
 - Modify `scripts/common/config/base.config`: remove the shared `CONFIG_PACKAGE_luci-app-gecoosac=y` selection.
 - Modify `scripts/common/package`: remove the `laipeng668/luci-app-gecoosac` overlay call only.
-- Create `scripts/ci/validate-gecoosac-removed.sh`: fail if active config or package overlay reintroduces `gecoosac`.
-- Modify `.github/workflows/ci-lint.yml`: run the new validator in CI Lint.
-- Modify `README.md`: list the validator in local validation commands.
 - Modify `docs/ci-workflow-architecture.md`: remove `gecoosac` from described selected overlay examples if present.
 - Modify `docs/superpowers/specs/2026-06-06-openwrt-config-guardrails-design.md`: remove `gecoosac` from current required/effective package evidence.
 - Modify `plan/upgrade-openwrt-firmware-performance-stability-1.md`: record the removal and update historical evidence text.
@@ -100,94 +97,7 @@ echo "gecoosac removal check passed"
 
 Expected: PASS with `gecoosac removal check passed`.
 
-## Task 3: Add A Permanent Removal Validator
-
-**Files:**
-- Create: `scripts/ci/validate-gecoosac-removed.sh`
-- Modify: `.github/workflows/ci-lint.yml`
-- Modify: `README.md`
-
-- [ ] **Step 1: Create the validator**
-
-Create `scripts/ci/validate-gecoosac-removed.sh`:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)}"
-CONFIG_FILE="${ROOT_DIR}/scripts/common/config/base.config"
-PACKAGE_OVERLAY="${ROOT_DIR}/scripts/common/package"
-
-if [ ! -f "${CONFIG_FILE}" ]; then
-  echo "ERROR: missing config file: ${CONFIG_FILE}" >&2
-  exit 1
-fi
-
-if [ ! -f "${PACKAGE_OVERLAY}" ]; then
-  echo "ERROR: missing package overlay script: ${PACKAGE_OVERLAY}" >&2
-  exit 1
-fi
-
-if rg -n 'CONFIG_PACKAGE_luci-app-gecoosac=y' "${CONFIG_FILE}"; then
-  echo "ERROR: gecoosac must not be selected in base.config" >&2
-  exit 1
-fi
-
-if rg -n 'laipeng668/luci-app-gecoosac|UPDATE_PACKAGE "luci-app-gecoosac"' "${PACKAGE_OVERLAY}"; then
-  echo "ERROR: gecoosac overlay must not be configured" >&2
-  exit 1
-fi
-
-echo "GecoOS AC removal validation passed."
-```
-
-- [ ] **Step 2: Make the validator executable**
-
-Run:
-
-```bash
-chmod +x scripts/ci/validate-gecoosac-removed.sh
-```
-
-Expected: command exits 0.
-
-- [ ] **Step 3: Run the validator**
-
-Run:
-
-```bash
-bash scripts/ci/validate-gecoosac-removed.sh
-```
-
-Expected: PASS with `GecoOS AC removal validation passed.`
-
-- [ ] **Step 4: Add the validator to CI Lint**
-
-In `.github/workflows/ci-lint.yml`, add this step after `Validate LEDE Small Overlay Policy / 校验 LEDE Small 覆盖策略`:
-
-```yaml
-      - name: Validate GecoOS AC Removal / 校验 GecoOS AC 移除策略
-        run: |
-          set -euo pipefail
-          bash scripts/ci/validate-gecoosac-removed.sh
-```
-
-- [ ] **Step 5: Add the validator to README local validation**
-
-In `README.md`, add:
-
-```bash
-bash scripts/ci/validate-gecoosac-removed.sh
-```
-
-immediately after:
-
-```bash
-bash scripts/ci/validate-lede-small-overlay.sh
-```
-
-## Task 4: Update Documentation
+## Task 3: Update Documentation
 
 **Files:**
 - Modify: `docs/ci-workflow-architecture.md`
@@ -212,7 +122,7 @@ Use this wording:
 
 In `plan/upgrade-openwrt-firmware-performance-stability-1.md`, update the evidence text that lists `luci-app-gecoosac` as requested/effective. Replace it with text that says `luci-app-gecoosac` was removed after run `28097015786` failed in `package/gecoosac` due to the missing parent `LICENSE`.
 
-## Task 5: Run Local Validation
+## Task 4: Run Local Validation
 
 **Files:**
 - Validate repository state only.
@@ -224,7 +134,6 @@ Run:
 ```bash
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-lede-small-overlay.sh
-bash scripts/ci/validate-gecoosac-removed.sh
 bash scripts/ci/validate-passwall-overlay.sh
 bash scripts/ci/validate-cache-key-policy.sh
 bash scripts/ci/validate-luci-zh-cn-config.sh
@@ -255,7 +164,7 @@ git diff --check
 
 Expected: all commands exit 0 and print no errors.
 
-## Task 6: Commit, Push, And Re-run LEDE Release Build
+## Task 5: Commit, Push, And Re-run LEDE Release Build
 
 **Files:**
 - Commit all files changed by Tasks 2 through 4.
@@ -269,14 +178,14 @@ git status --short --branch
 git diff --stat
 ```
 
-Expected: only the intended config, overlay, validator, workflow, README, and docs files are changed.
+Expected: only the intended config, overlay, and documentation files are changed.
 
 - [ ] **Step 2: Commit implementation**
 
 Run:
 
 ```bash
-git add scripts/common/config/base.config scripts/common/package scripts/ci/validate-gecoosac-removed.sh .github/workflows/ci-lint.yml README.md docs/ci-workflow-architecture.md docs/superpowers/specs/2026-06-06-openwrt-config-guardrails-design.md plan/upgrade-openwrt-firmware-performance-stability-1.md
+git add scripts/common/config/base.config scripts/common/package docs/superpowers/plans/2026-06-24-remove-gecoosac.md docs/superpowers/specs/2026-06-06-openwrt-config-guardrails-design.md plan/upgrade-openwrt-firmware-performance-stability-1.md
 git commit -m "build: remove gecoosac from firmware baseline"
 ```
 
