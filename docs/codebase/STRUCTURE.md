@@ -35,7 +35,7 @@
 
 - Workflow files use firmware-domain names: `firmware-ci.yml`, `firmware-build.yml`, `ci-lint.yml`.
 - CI shell modules use kebab-case: `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`.
-- Profile ids match existing device directory names, for example `x86_64_immortalWrt` and `Qualcommax_B`.
+- Profile ids match existing device directory names, for example `x86_64_immortalWrt` and `Qualcommax_LEDE`.
 - Profile paths are relative to the repository root unless explicitly absolute.
 
 ### 5) Evidence

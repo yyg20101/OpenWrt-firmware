@@ -63,11 +63,12 @@ Cache save is stricter than exact-hit detection: save steps run only when `cache
 Current enabled profiles leave `feeds_conf` empty, so `config-feeds.sh prepare-feeds` does not replace upstream `feeds.conf.default`.
 
 - `coolsnowwolf/lede` declares `src-git luci https://github.com/coolsnowwolf/luci.git;openwrt-25.12`.
-- `immortalwrt/immortalwrt`, `VIKINGYFY/immortalwrt`, and `LiBwrt/openwrt-6.x` declare `src-git luci https://github.com/immortalwrt/luci.git`.
+- The official `immortalwrt/immortalwrt` profile tracks `openwrt-25.12`, which declares `src-git luci https://github.com/immortalwrt/luci.git;openwrt-25.12`.
+- `VIKINGYFY/immortalwrt` is a fork/derived source and keeps the LuCI feed declared by its current source branch.
 
 LuCI Chinese support follows upstream LuCI rules. The shared fragment selects `CONFIG_LUCI_LANG_zh_Hans=y`; upstream `luci.mk` maps `zh_Hans` to `zh-cn` package aliases and creates matching `luci-i18n` packages for installed modules. The config audit verifies the defconfig result contains `CONFIG_PACKAGE_luci-i18n-base-zh-cn=y` without hard-coding per-plugin translation packages.
 
-ImmortalWrt's `luci` collection depends on `luci-light`; `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`. The Bootstrap theme installs its own default `main.mediaurlbase`, and `luci-base` depends on `rpcd`/`rpcd-mod-luci` and adds the uHTTPd LuCI ucode handler through its post-install script. Local config therefore avoids hard-coding LuCI runtime/library dependencies and audits those defaults instead of replacing them.
+LEDE `master` and official ImmortalWrt `openwrt-25.12` include LuCI in their upstream `DEFAULT_PACKAGES`. Fork/derived source branches that do not enable that upstream default attach `scripts/common/config/luci-web.config` as a compatibility guard. ImmortalWrt's `luci` collection depends on `luci-light`; `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`. The Bootstrap theme installs its own default `main.mediaurlbase`, and `luci-base` depends on `rpcd`/`rpcd-mod-luci` and adds the uHTTPd LuCI ucode handler through its post-install script. Local config therefore avoids hard-coding LuCI runtime/library dependencies and audits those defaults instead of replacing them.
 
 LEDE builds first seed the local package tree from `kenzok8/small` `master` in `all` mode, after removing matching local/feed package directories for that repository's package set. This supplies LEDE-oriented proxy packages such as SSR Plus, OpenClash, HomeProxy, Mihomo/MosDNS/Nikki, and related dependencies without applying the same feed to ImmortalWrt-family profiles.
 

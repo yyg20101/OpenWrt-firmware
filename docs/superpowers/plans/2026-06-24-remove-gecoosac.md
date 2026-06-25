@@ -77,7 +77,7 @@ The start of the shared overlay block should contain:
 
 ```bash
 case "${SOURCE_REPO:-}" in
-  lede|immortalwrt|openwrt-6.x)
+  lede|immortalwrt)
   UPDATE_PACKAGE "luci-app-mini-diskmanager" "4IceG/luci-app-mini-diskmanager" "main" "all"
   UPDATE_PACKAGE "luci-app-partexp" "sirpdboy/luci-app-partexp" "main" "all"
   UPDATE_PACKAGE "luci-app-wolplus" "animegasan/luci-app-wolplus" "main" "root"

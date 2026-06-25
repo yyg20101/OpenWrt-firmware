@@ -267,7 +267,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 
 1. Profile upstream-following behavior remains intact: `devices/profiles.yml` keeps upstream branches and does not pin source commits.
 2. Upstream LuCI/feed behavior is confirmed: enabled profiles use each source tree's official `feeds.conf.default`, and LuCI Simplified Chinese is selected through official `CONFIG_LUCI_LANG_zh_Hans=y`.
-3. Local LuCI hard-coding has been reduced: `base.config` keeps `CONFIG_PACKAGE_luci=y` as the official collection selector and no longer forces LuCI runtime/library internals.
+3. Local LuCI hard-coding has been reduced: official LuCI-default source branches rely on upstream `DEFAULT_PACKAGES`, while fork/derived branches that do not enable that default use `luci-web.config` as an explicit compatibility guard. Local config still avoids forcing LuCI runtime/library internals.
 4. Samba4/autosamba policy is confirmed: Samba4 stays enabled, `autosamba` stays disabled, and config audit prevents coexistence.
 5. PassWall overlay policy is confirmed: local/feed conflicts are cleaned, dependency packages use the official packages repo, and `luci-app-passwall` uses the latest official tag policy.
 6. Cache redundancy mitigation is confirmed: workflow cache keys use monthly `cache_period`; save steps require empty `cache-matched-key`, so fallback cache restores do not create duplicate saves.
@@ -331,7 +331,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 |------|-------------------|----------------|--------|
 | Feeds | `coolsnowwolf/lede` uses the official coolsnowwolf LuCI feed; ImmortalWrt-family sources use the official ImmortalWrt LuCI feed; enabled profiles do not set `feeds_conf`. | Keep upstream `feeds.conf.default`; do not add local feed overrides. | 已确认 |
 | LuCI language | Active LuCI feeds expose `CONFIG_LUCI_LANG_zh_Hans` and generate `zh-cn` i18n packages from the official LuCI language mechanism. | Keep only `scripts/common/config/luci-zh-cn.config` with `CONFIG_LUCI_LANG_zh_Hans=y`; do not hard-code per-plugin i18n packages. | 已实施 |
-| LuCI runtime, theme, uHTTPd, rpcd | Official LuCI collections provide default theme, uHTTPd, uHTTPd ubus, and rpcd dependencies through package metadata and post-install behavior. | Keep `CONFIG_PACKAGE_luci=y`; do not force local LuCI runtime/library internals; verify expanded result through config audit. | 已实施 |
+| LuCI runtime, theme, uHTTPd, rpcd | Official LuCI collections provide default theme, uHTTPd, uHTTPd ubus, and rpcd dependencies through package metadata and post-install behavior. LEDE `master` and official ImmortalWrt `openwrt-25.12` select LuCI in upstream defaults; selected fork/derived branches do not. | Remove the shared `CONFIG_PACKAGE_luci=y` from `base.config`; use `luci-web.config` only for branches without an upstream LuCI default; verify expanded result through config audit. | 已实施 |
 | Samba | Upstream feeds may provide `autosamba`, and Samba4/autosamba can conflict on block hotplug paths. | Keep `luci-app-samba4` only in `samba.config`; keep `autosamba` disabled there; remove duplicate Samba declarations from other fragments. | 已整理 |
 | Source-specific plugins | `luci-app-openvpn` exists in the checked LEDE LuCI feed but not in the checked ImmortalWrt LuCI feed. Several LEDE-oriented selections are intentionally carried in `lede-extra.config`. | Keep OpenVPN and LEDE-only apps in `lede-extra.config`; do not request them from non-LEDE profiles. | 已实施 |
 | Third-party plugin overlays | Verified selected third-party repositories expose package Makefiles for mini-diskmanager, partexp, wolplus, LEDE-only mwan3helper, and the `kenzok8/small` package set. `luci-app-alist` and `luci-app-gecoosac` have been intentionally removed. | Seed LEDE builds from `kenzok8/small@master`, overlay selected shared apps for supported source trees, keep mwan3helper only for LEDE, rely on firmware defaults for removed packages, and audit requested apps after defconfig. | 已证明 |
@@ -344,9 +344,9 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 
 | Evidence | Result |
 |----------|--------|
-| Upstream source refresh | `/private/tmp/openwrt-upstream-config-audit/{lede,immortalwrt,viking,libwrt}` all reported `Already up to date`; `git fetch origin main` completed. |
+| Upstream source refresh | `/private/tmp/openwrt-upstream-config-audit/{lede,immortalwrt,viking}` all reported `Already up to date`; `git fetch origin main` completed. |
 | Config fragment cleanup | Removed duplicate `CONFIG_PACKAGE_luci-app-samba4` from `base.config`; removed duplicate `autosamba` guard from `lede-extra.config`; changed `immortalwrt-extra.config` into an empty source-specific extension point because its package selections duplicate shared fragments. |
-| Required plugin static audit | All five enabled profiles still include LuCI, PassWall, HomeProxy, Samba4, WireGuard, LuCI Chinese, BBR, SQM, and CAKE through their combined device config and shared fragments. |
+| Required plugin static audit | All enabled profiles still include LuCI, PassWall, HomeProxy, Samba4, WireGuard, LuCI Chinese, BBR, SQM, and CAKE through their combined device config and shared fragments. |
 | Local validators | Passed `validate-profiles.sh`, `validate-luci-zh-cn-config.sh`, `validate-passwall-overlay.sh`, `test-config-audit.sh`, `test-config-feeds.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `validate-cache-key-policy.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, workflow YAML parsing, shell syntax checks, and `git diff --check`. |
 | GitHub Actions final x86 run | `Firmware CI` run `27050273854` on `main`, commit `7a21daeddc8aa0391e7703473708b5f661e56296`, target `x86_64_all`, `release=false`, completed with conclusion `success`; both `x86_64_LEDE` and `x86_64_immortalWrt` jobs completed successfully. |
 | Artifact download and firmware checksum verification | Downloaded artifacts to `/private/tmp/openwrt-artifacts-27050273854`; both firmware artifacts include `build.config`, `artifact-manifest.txt`, `firmware-size-report.md`, `build-environment-provenance.md`, `package-source-manifest.tsv`, `Packages.tar.gz`, x86 compressed images, and `sha256sums.txt`; `shasum -a 256 -c sha256sums.txt` passed for both profiles. |
@@ -366,7 +366,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 
 - **LOCK-001**: `devices/profiles.yml` 的 profile 必须继续跟随上游 `source_branch`；禁止为了稳定构建而 pin 到固定 commit。
 - **LOCK-002**: 必要插件不能移除；包括 LuCI、PassWall、HomeProxy、Samba4、WireGuard、BBR、SQM、CAKE、LuCI 中文等现有必需能力。
-- **LOCK-003**: LuCI、主题、中文、uHTTPd、rpcd 优先使用上游官方 feed 和官方元包依赖；本地只保留 `CONFIG_PACKAGE_luci=y` 与 `CONFIG_LUCI_LANG_zh_Hans=y` 这类必要选择。
+- **LOCK-003**: LuCI、主题、中文、uHTTPd、rpcd 优先使用上游官方 feed 和官方元包依赖；本地只保留 `CONFIG_LUCI_LANG_zh_Hans=y`，以及给未启用上游 LuCI 默认包集合的 fork/衍生分支使用的 `luci-web.config` 兜底。
 - **LOCK-004**: Samba4 与 autosamba 不共存；保留 Samba4，禁用 autosamba。
 - **LOCK-005**: OpenVPN 和 LEDE-only 插件只保留在 LEDE 配置片段；非 LEDE profile 不强制请求。
 - **LOCK-006**: PassWall 是所有固件必需插件，必须继续使用官方 PassWall 依赖仓和应用仓 overlay。
@@ -394,7 +394,7 @@ The current baseline includes profile drift reporting, x86 smoke validation, fai
 | IMPL-001 | `git status --short --branch` | 每次实施前确认本地分支、远端同步和未提交改动。 | `main...origin/main` 清晰；如有未提交改动，先判断是否属于本次任务。 |
 | IMPL-002 | `devices/profiles.yml` | 审查 enabled profiles 的 `source_repo`、`source_branch`、`cache_group`、`make_compile_jobs`、`config_fragments`。 | `source_branch` 跟随上游；所有 config fragment 路径存在；x86 cache group 隔离正确。 |
 | IMPL-003 | 上游源码目录 `/private/tmp/openwrt-upstream-config-audit/*` | 刷新并检查上游默认 `feeds.conf.default`、LuCI package metadata、x86 target defaults。 | 本地新增配置必须能说明是必要插件、产物约束、性能守护或 CI 加速。 |
-| IMPL-004 | `scripts/common/config/base.config` | 只保留全局基础能力和必要元包；避免重复选择 Samba、proxy、platform-specific 包。 | Samba 不在 base 重复声明；LuCI 使用 `CONFIG_PACKAGE_luci=y`。 |
+| IMPL-004 | `scripts/common/config/base.config`、`scripts/common/config/luci-web.config` | 只保留全局基础能力和必要兜底；避免重复选择 Samba、proxy、platform-specific 包。 | Samba 不在 base 重复声明；官方默认分支不再本地选择 LuCI 元包；缺少上游 LuCI 默认的 fork/衍生分支通过 `luci-web.config` 兜底。 |
 | IMPL-005 | `scripts/common/config/luci-zh-cn.config` | 保持官方语言选择 `CONFIG_LUCI_LANG_zh_Hans=y`。 | 不硬编码 `luci-i18n-*-zh-cn` per-plugin 包。 |
 | IMPL-006 | `scripts/common/config/samba.config` | 集中管理 Samba4/autosamba 策略。 | `CONFIG_PACKAGE_luci-app-samba4=y`；`# CONFIG_PACKAGE_autosamba is not set`。 |
 | IMPL-007 | `scripts/common/config/proxy.config` and `scripts/common/Packages.sh` | 保持 PassWall/HomeProxy 必要插件和官方 overlay 来源策略。 | `validate-passwall-overlay.sh` 通过；artifact provenance 可追溯 tag/ref/commit。 |

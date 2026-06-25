@@ -173,16 +173,20 @@ def validate_luci_web_options!(root, id, profile)
   end
   return unless has_luci
 
-  required = {
-    "CONFIG_PACKAGE_luci" => "y"
-  }
+  return if config_assignment(lines, "CONFIG_PACKAGE_luci") == "y"
+  return if upstream_luci_default?(profile)
 
-  required.each do |option, expected|
-    actual = config_assignment(lines, option)
-    next if actual == expected
+  fail!("profile #{id} enables LuCI components but lacks explicit CONFIG_PACKAGE_luci=y and is not a known upstream LuCI-default source")
+end
 
-    fail!("profile #{id} enables LuCI components but lacks #{option}=#{expected}, got #{actual || "unset"}")
-  end
+def upstream_luci_default?(profile)
+  source_repo = profile.fetch("source_repo").to_s.sub(%r{\.git\z}, "")
+  source_branch = profile.fetch("source_branch").to_s
+
+  return true if source_repo == "https://github.com/coolsnowwolf/lede" && source_branch == "master"
+  return true if source_repo == "https://github.com/immortalwrt/immortalwrt" && source_branch.match?(/\Aopenwrt-(18\.06|21\.02|23\.05|24\.10|25\.12)\z/)
+
+  false
 end
 
 def validate_profile!(root, id, raw_profile, defaults)

@@ -36,7 +36,7 @@ profiles:
     title: x86_64 ImmortalWrt
     enabled: true
     source_repo: https://github.com/immortalwrt/immortalwrt
-    source_branch: master
+    source_branch: openwrt-25.12
     firmware_tag: X86-64
     cache_group: x86_64
     make_compile_jobs: 2
@@ -95,23 +95,4 @@ profiles:
       - scripts/common/config/luci-zh-cn.config
       - scripts/common/config/samba.config
       - scripts/common/config/qualcommax-ipq60xx.config
-
-  Qualcommax_B:
-    title: Qualcommax B
-    enabled: true
-    source_repo: https://github.com/LiBwrt/openwrt-6.x
-    source_branch: main-nss
-    firmware_tag: qualcommax
-    cache_group: qualcommax
-    groups:
-      - qualcommax_all
-    config: devices/Qualcommax_B/.config
-    config_fragments:
-      - scripts/common/config/base.config
-      - scripts/common/config/network-performance.config
-      - scripts/common/config/storage.config
-      - scripts/common/config/usb-mobile.config
-      - scripts/common/config/proxy.config
-      - scripts/common/config/luci-zh-cn.config
-      - scripts/common/config/samba.config
-      - scripts/common/config/qualcommax-ipq60xx.config
+      - scripts/common/config/luci-web.config

@@ -43,7 +43,7 @@
 | `.github/workflows/firmware-build.yml` | Central build phase order, cache keys, artifact paths, and Release wiring live here. | Large workflow surface. | Keep step outputs explicit and run YAML/profile validation after edits. |
 | `scripts/ci/profiles.sh` | Profile validation, matrix output, env/output contracts, and cache hash computation live here. | New central contract. | Test with single profile and `all` matrix before workflow changes. |
 | `scripts/ci/config-feeds.sh` | Mutates the cloned OpenWrt tree. | Source/feeds layout can vary by upstream. | Keep path resolution explicit and fail on missing declared inputs. |
-| `devices/profiles.yml` source branches | External repos can rename or remove branches. | `Qualcommax_B` tracks `LiBwrt/openwrt-6.x` `main-nss`, the current default branch. | Verify source branches before changing profile sources. |
+| `devices/profiles.yml` source branches | External repos can rename or remove branches. | Enabled profiles track upstream source branches rather than commits. | Verify source branches before changing profile sources. |
 
 ### 6) `[ASK USER]` Questions
 

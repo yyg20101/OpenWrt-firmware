@@ -28,7 +28,7 @@ require_contains "${PACKAGE_BASE}" "latest-required"
 require_contains "${PACKAGE_BASE}" "UPDATE_PACKAGE_LATEST_TAG()"
 require_contains "${PACKAGE_BASE}" 'UPDATE_PACKAGE "$1" "$2" "$3" "${4:-}" "${5:-}" "latest-required"'
 
-require_contains "${PACKAGE_OVERLAY}" 'lede|immortalwrt|openwrt-6.x)'
+require_contains "${PACKAGE_OVERLAY}" 'lede|immortalwrt)'
 require_contains "${PACKAGE_OVERLAY}" 'UPDATE_PACKAGE "passwall-packages" "Openwrt-Passwall/openwrt-passwall-packages" "main" "all"'
 require_contains "${PACKAGE_OVERLAY}" 'UPDATE_PACKAGE_LATEST_TAG "passwall" "Openwrt-Passwall/openwrt-passwall" "main" "pkg" "luci-app-passwall"'
 require_not_contains "${PACKAGE_OVERLAY}" 'UPDATE_PACKAGE "passwall" "Openwrt-Passwall/openwrt-passwall"'

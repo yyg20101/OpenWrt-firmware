@@ -38,7 +38,6 @@
 - `x86_64_immortalWrt`
 - `Qualcommax_LEDE`
 - `Qualcommax_V`
-- `Qualcommax_B`
 
 新增设备的最小步骤：
 
@@ -63,12 +62,13 @@ my_profile:
 
 通用固件能力由多个 `scripts/common/config/*.config` 片段组合：
 
-- `base.config`：基础 LuCI 应用、核心工具、网络与隧道支持
+- `base.config`：基础 LuCI 应用、核心工具、网络与隧道支持；不包含 LuCI 元包入口
 - `network-performance.config`：BBR、SQM/CAKE、IFB 等网络吞吐和低延迟队列能力
 - `storage.config`：磁盘、文件系统、NVMe/SATA/NFS 支持
 - `usb-mobile.config`：USB 外设、USB 网卡、移动网络支持
 - `proxy.config`：DNS/代理相关共享包
 - `luci-zh-cn.config`：官方 LuCI 简体中文语言项，插件翻译包跟随 LuCI feed 的默认规则
+- `luci-web.config`：仅供未启用上游 LuCI 默认包集合的 fork/source 分支显式选择 LuCI Web 入口
 - `samba.config`：Samba4 文件共享栈，并显式禁用 autosamba
 
 平台、源码系、设备族和性能优化差异继续通过 profile 的 `config_fragments` 追加，例如 `x86.config`、`x86-performance.config`、`qualcommax-ipq60xx.config`、`lede-extra.config`。x86 性能片段同时启用 Intel/AMD microcode，降低 CPU errata 和虚拟化/软路由场景下的稳定性风险。
@@ -109,9 +109,9 @@ Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 `cache
 
 ## Feeds and LuCI
 
-当前 profile 不覆盖上游 `feeds.conf.default`。`coolsnowwolf/lede` 使用官方声明的 `coolsnowwolf/luci.git;openwrt-25.12`，ImmortalWrt 系 profile 使用官方声明的 `immortalwrt/luci.git`。
+当前 profile 不覆盖上游 `feeds.conf.default`。`coolsnowwolf/lede` 使用官方声明的 `coolsnowwolf/luci.git;openwrt-25.12`；官方 `immortalwrt/immortalwrt` profile 跟随 `openwrt-25.12`，并使用官方声明的 `immortalwrt/luci.git;openwrt-25.12`；fork/衍生 profile 继续使用其源码分支声明的 LuCI feed。
 
-LuCI 中文支持只选择 `CONFIG_LUCI_LANG_zh_Hans=y`。上游 LuCI `luci.mk` 会把 `zh_Hans` 映射为 `zh-cn` 翻译包，并按已安装 LuCI 模块自动带出对应 `luci-i18n` 包；本地不逐个硬编码插件中文包。ImmortalWrt 的 `luci` 元包默认依赖 `luci-light`，`luci-light` 默认带 `luci-theme-bootstrap`、`uhttpd` 和 `uhttpd-mod-ubus`，主题与 uHTTPd 入口保持官方默认。本地也不硬编码 `luci-base`、LuCI runtime/lib 等依赖，只在审计里校验 defconfig 展开结果。
+LuCI 中文支持只选择 `CONFIG_LUCI_LANG_zh_Hans=y`。上游 LuCI `luci.mk` 会把 `zh_Hans` 映射为 `zh-cn` 翻译包，并按已安装 LuCI 模块自动带出对应 `luci-i18n` 包；本地不逐个硬编码插件中文包。LEDE `master` 和官方 ImmortalWrt `openwrt-25.12` 已在上游 `DEFAULT_PACKAGES` 中选择 LuCI；未启用该上游默认的 fork/衍生分支通过 `luci-web.config` 显式选择 `CONFIG_PACKAGE_luci=y`。ImmortalWrt 的 `luci` 元包默认依赖 `luci-light`，`luci-light` 默认带 `luci-theme-bootstrap`、`uhttpd` 和 `uhttpd-mod-ubus`，主题与 uHTTPd 入口保持官方默认。本地也不硬编码 `luci-base`、LuCI runtime/lib 等依赖，只在审计里校验 defconfig 展开结果。
 
 PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt-passwall-packages` 跟随官方 `main`，`luci-app-passwall` 主仓强制拉取官方最新 tag。
 
