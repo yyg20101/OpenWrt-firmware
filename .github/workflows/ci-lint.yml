@@ -85,6 +85,16 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-release-maintenance.sh
 
+      - name: Validate Release Skip Fixture / 校验无变化发布跳过夹具
+        run: |
+          set -euo pipefail
+          bash scripts/ci/test-release-skip.sh
+
+      - name: Validate Build Metrics Fixture / 校验构建指标夹具
+        run: |
+          set -euo pipefail
+          bash scripts/ci/test-build-metrics.sh
+
       - name: Validate Optimization Health Fixture / 校验优化健康报告
         run: |
           set -euo pipefail

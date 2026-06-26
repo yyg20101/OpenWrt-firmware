@@ -81,6 +81,10 @@ compile_firmware() {
   local jobs=1
   local max_jobs="${MAKE_COMPILE_JOBS:-}"
   local heartbeat_pid=""
+  local compile_started_epoch
+  local compile_completed_epoch
+  local compile_started_at
+  local compile_completed_at
 
   jobs="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
   [[ "${jobs}" =~ ^[0-9]+$ ]] || jobs=1
@@ -94,6 +98,8 @@ compile_firmware() {
   ccache -s || true
   : > "${compile_log}"
   echo "Compile jobs: ${jobs} (runner cores: $(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown), limit: ${max_jobs:-auto})" | tee -a "${compile_log}"
+  compile_started_epoch="$(date +%s)"
+  compile_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   start_compile_heartbeat "${compile_log}" "${openwrt_path}"
   heartbeat_pid="${COMPILE_HEARTBEAT_PID}"
 
@@ -111,6 +117,13 @@ compile_firmware() {
   set -e
   stop_compile_heartbeat "${heartbeat_pid}"
   heartbeat_pid=""
+  compile_completed_epoch="$(date +%s)"
+  compile_completed_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  append_line "${env_target}" "COMPILE_JOBS=${jobs}"
+  append_line "${env_target}" "COMPILE_STARTED_AT=${compile_started_at}"
+  append_line "${env_target}" "COMPILE_COMPLETED_AT=${compile_completed_at}"
+  append_line "${env_target}" "COMPILE_DURATION_SECONDS=$((compile_completed_epoch - compile_started_epoch))"
 
   ccache -s || true
   if [ "${build_exit}" -eq 0 ]; then

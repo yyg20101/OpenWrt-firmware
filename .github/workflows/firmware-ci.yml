@@ -107,4 +107,5 @@ jobs:
       profile: ${{ matrix.profile }}
       make_latest: ${{ needs.resolve.outputs.make_latest == 'true' }}
       release: ${{ needs.resolve.outputs.release == 'true' }}
+      skip_unchanged: ${{ github.event_name == 'schedule' }}
     secrets: inherit
