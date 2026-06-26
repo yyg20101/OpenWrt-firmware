@@ -9,6 +9,38 @@ append_line() {
   fi
 }
 
+COMPILE_HEARTBEAT_PID=""
+
+start_compile_heartbeat() {
+  local compile_log="$1"
+  local openwrt_path="$2"
+  local interval="${COMPILE_HEARTBEAT_SECONDS:-300}"
+
+  [[ "${interval}" =~ ^[0-9]+$ ]] || interval=300
+  [ "${interval}" -ge 60 ] || interval=60
+
+  (
+    while true; do
+      sleep "${interval}" || exit 0
+      {
+        echo "[compile heartbeat] $(date -u +"%Y-%m-%dT%H:%M:%SZ") build still running"
+        free -h 2>/dev/null || true
+        df -hT "${openwrt_path}" 2>/dev/null || true
+      } | tee -a "${compile_log}"
+    done
+  ) &
+  COMPILE_HEARTBEAT_PID="$!"
+}
+
+stop_compile_heartbeat() {
+  local heartbeat_pid="${1:-}"
+
+  if [ -n "${heartbeat_pid}" ]; then
+    kill "${heartbeat_pid}" 2>/dev/null || true
+    wait "${heartbeat_pid}" 2>/dev/null || true
+  fi
+}
+
 download_dependencies() {
   local openwrt_path="$1"
   local jobs="${2:-${MAKE_DOWNLOAD_JOBS:-8}}"
@@ -48,6 +80,7 @@ compile_firmware() {
   local build_exit=0
   local jobs=1
   local max_jobs="${MAKE_COMPILE_JOBS:-}"
+  local heartbeat_pid=""
 
   jobs="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
   [[ "${jobs}" =~ ^[0-9]+$ ]] || jobs=1
@@ -61,6 +94,8 @@ compile_firmware() {
   ccache -s || true
   : > "${compile_log}"
   echo "Compile jobs: ${jobs} (runner cores: $(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown), limit: ${max_jobs:-auto})" | tee -a "${compile_log}"
+  start_compile_heartbeat "${compile_log}" "${openwrt_path}"
+  heartbeat_pid="${COMPILE_HEARTBEAT_PID}"
 
   set +e
   make -j"${jobs}" 2>&1 | tee -a "${compile_log}"
@@ -74,6 +109,8 @@ compile_firmware() {
     build_exit=${PIPESTATUS[0]}
   fi
   set -e
+  stop_compile_heartbeat "${heartbeat_pid}"
+  heartbeat_pid=""
 
   ccache -s || true
   if [ "${build_exit}" -eq 0 ]; then
