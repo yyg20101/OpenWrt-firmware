@@ -83,7 +83,9 @@ jobs:
           append_output() {
             local key="$1"
             local value="$2"
-            local delimiter="EOF_${key}_${RANDOM}_$(date +%s%N)"
+            local delimiter
+
+            delimiter="EOF_${key}_${RANDOM}_$(date +%s%N)"
             {
               printf '%s<<%s\n' "${key}" "${delimiter}"
               printf '%s\n' "${value}"
