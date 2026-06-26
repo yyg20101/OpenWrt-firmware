@@ -65,10 +65,10 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-cache-key-policy.sh
 
-      - name: Validate LuCI Chinese Policy / 校验 LuCI 中文策略
+      - name: Validate LuCI Default Policy / 校验 LuCI 默认策略
         run: |
           set -euo pipefail
-          bash scripts/ci/validate-luci-zh-cn-config.sh
+          bash scripts/ci/validate-luci-default-policy.sh
 
       - name: Validate PassWall Overlay Policy / 校验 PassWall 覆盖策略
         run: |

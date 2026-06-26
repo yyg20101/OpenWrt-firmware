@@ -26,7 +26,6 @@ profiles:
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
-      - scripts/common/config/luci-zh-cn.config
       - scripts/common/config/samba.config
       - scripts/common/config/x86.config
       - scripts/common/config/x86-performance.config
@@ -48,7 +47,6 @@ profiles:
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
-      - scripts/common/config/luci-zh-cn.config
       - scripts/common/config/samba.config
       - scripts/common/config/x86.config
       - scripts/common/config/x86-performance.config
@@ -70,7 +68,6 @@ profiles:
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
-      - scripts/common/config/luci-zh-cn.config
       - scripts/common/config/samba.config
       - scripts/common/config/qualcommax-ipq60xx.config
       - scripts/common/config/lede-extra.config
@@ -91,7 +88,6 @@ profiles:
       - scripts/common/config/storage.config
       - scripts/common/config/usb-mobile.config
       - scripts/common/config/proxy.config
-      - scripts/common/config/luci-zh-cn.config
       - scripts/common/config/samba.config
       - scripts/common/config/qualcommax-ipq60xx.config
       - scripts/common/config/luci-web.config

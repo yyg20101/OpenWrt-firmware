@@ -320,19 +320,107 @@ write_size_report() {
       if [[ "${rootfs_partsize:-}" =~ ^[0-9]+$ ]] && [ "${rootfs_partsize}" -gt 0 ]; then
         share="$(awk -v bytes="${size_bytes}" -v mib="${rootfs_partsize}" 'BEGIN { printf "%.2f%%", bytes / (mib * 1024 * 1024) * 100 }')"
       fi
-      printf '| `%s` | `%s` | `%s` |\n' "${name}" "${size_human}" "${share}"
+      printf "| \`%s\` | \`%s\` | \`%s\` |\n" "${name}" "${size_human}" "${share}"
     done
   } > "${report}"
 }
 
 write_artifact_manifest() {
   local firmware_path="$1"
+  local manifest_tmp
 
   cd "${firmware_path}"
-  find . -maxdepth 1 -type f ! -name artifact-manifest.txt ! -name artifact-manifest.tmp -print | while IFS= read -r file; do
+  manifest_tmp="$(mktemp)"
+  find . -maxdepth 1 -type f ! -name artifact-manifest.txt -print | while IFS= read -r file; do
     basename "${file}"
-  done | sort > artifact-manifest.tmp
-  mv artifact-manifest.tmp artifact-manifest.txt
+  done | sort > "${manifest_tmp}"
+  mv "${manifest_tmp}" artifact-manifest.txt
+}
+
+config_value_from_file() {
+  local config_file="$1"
+  local option="$2"
+
+  awk -v option="${option}" '
+    $0 == "# " option " is not set" { value="n"; next }
+    index($0, option "=") == 1 { value=substr($0, length(option) + 2); next }
+    END { if (value != "") print value }
+  ' "${config_file}" 2>/dev/null || true
+}
+
+official_luci_i18n_required() {
+  case "${REPO_URL:-}" in
+    https://github.com/coolsnowwolf/lede|https://github.com/coolsnowwolf/lede.git|\
+    https://github.com/immortalwrt/immortalwrt|https://github.com/immortalwrt/immortalwrt.git)
+      return 0
+      ;;
+  esac
+
+  case "${SOURCE_SLUG:-}" in
+    coolsnowwolf_lede|immortalwrt_immortalwrt)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+validate_compiled_luci_i18n() {
+  local firmware_path="$1"
+  local report="${firmware_path}/compiled-luci-i18n-report.md"
+  local config_file="${firmware_path}/build.config"
+  local package_archive="${firmware_path}/Packages.tar.gz"
+  local lang_value=""
+  local base_i18n_value=""
+  local matched_packages=""
+  local mode="report-only"
+  local package_status="missing"
+
+  if official_luci_i18n_required; then
+    mode="required"
+  fi
+
+  if [ -f "${config_file}" ]; then
+    lang_value="$(config_value_from_file "${config_file}" "CONFIG_LUCI_LANG_zh_Hans")"
+    base_i18n_value="$(config_value_from_file "${config_file}" "CONFIG_PACKAGE_luci-i18n-base-zh-cn")"
+  fi
+
+  if [ -f "${package_archive}" ]; then
+    matched_packages="$(tar -tzf "${package_archive}" 2>/dev/null | grep -E '(^|/)luci-i18n-base-zh-cn([_.-].*)?\.(ipk|apk)$' || true)"
+  fi
+  if [ -n "${matched_packages}" ]; then
+    package_status="found"
+  fi
+
+  {
+    echo "# Compiled LuCI i18n Report"
+    echo
+    echo "| Field | Value |"
+    echo "|-------|-------|"
+    echo "| Profile | ${PROFILE_ID:-unknown} |"
+    echo "| Source repo | ${REPO_URL:-${SOURCE_REPO:-unknown}} |"
+    echo "| Source slug | ${SOURCE_SLUG:-unknown} |"
+    echo "| Source branch | ${REPO_BRANCH:-unknown} |"
+    echo "| Check mode | ${mode} |"
+    echo "| CONFIG_LUCI_LANG_zh_Hans | ${lang_value:-unset} |"
+    echo "| CONFIG_PACKAGE_luci-i18n-base-zh-cn | ${base_i18n_value:-unset} |"
+    echo "| Packages.tar.gz luci-i18n-base-zh-cn | ${package_status} |"
+    echo
+    echo "## Matched Packages"
+    echo
+    if [ -n "${matched_packages}" ]; then
+      printf '%s\n' "${matched_packages}" | sed 's/^/- `/' | sed 's/$/`/'
+    else
+      echo "- none"
+    fi
+  } > "${report}"
+
+  if [ "${mode}" = "required" ] && [ "${package_status}" != "found" ]; then
+    echo "ERROR: official firmware output is missing luci-i18n-base-zh-cn in Packages.tar.gz." >&2
+    echo "See ${report}" >&2
+    exit 1
+  fi
 }
 
 organize_firmware_files() {
@@ -357,6 +445,7 @@ organize_firmware_files() {
   fi
   tar -zcf Packages.tar.gz packages
   cp "${openwrt_path}/.config" build.config
+  validate_compiled_luci_i18n "${PWD}"
   if [ -f "${openwrt_path}/package-source-manifest.tsv" ]; then
     cp "${openwrt_path}/package-source-manifest.tsv" package-source-manifest.tsv
   fi

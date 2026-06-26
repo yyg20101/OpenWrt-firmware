@@ -75,8 +75,6 @@ CONFIG_PACKAGE_sqm-scripts=y
 CONFIG_PACKAGE_luci-app-sqm=y
 CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-base=y
-CONFIG_LUCI_LANG_zh_Hans=y
-CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
 CONFIG_PACKAGE_luci-theme-bootstrap=y
 CONFIG_PACKAGE_rpcd=y
 CONFIG_PACKAGE_rpcd-mod-luci=y
@@ -137,21 +135,6 @@ expect_fail_without_theme() {
   fi
 }
 
-expect_fail_without_luci_language() {
-  write_config "${OPENWRT_DIR}/.config"
-  sed -i.bak '/^CONFIG_LUCI_LANG_zh_Hans=y$/d' "${OPENWRT_DIR}/.config"
-  rm -f "${OPENWRT_DIR}/.config.bak"
-  if bash "${ROOT_DIR}/scripts/ci/audit-config.sh" "${OPENWRT_DIR}" "${WORK_DIR}" "fixture-luci-language" >"${TMP_DIR}/audit.log" 2>&1; then
-    echo "ERROR: audit passed without a LuCI Simplified Chinese language selection" >&2
-    exit 1
-  fi
-  if ! grep -q "requires CONFIG_LUCI_LANG_zh_Hans=y" "${TMP_DIR}/audit.log"; then
-    echo "ERROR: expected missing-LuCI-language audit failure" >&2
-    cat "${TMP_DIR}/audit.log" >&2
-    exit 1
-  fi
-}
-
 expect_fail_without_performance_overlay() {
   write_config "${OPENWRT_DIR}/.config"
   rm -f "${WORK_DIR}/files/etc/uci-defaults/99-performance-defaults"
@@ -193,13 +176,11 @@ expect_fail_when_defconfig_drops_luci_app "CONFIG_PACKAGE_luci-app-msd_lite"
 expect_fail_without "CONFIG_PACKAGE_uhttpd" "requires CONFIG_PACKAGE_uhttpd=y"
 expect_fail_without "CONFIG_PACKAGE_uhttpd-mod-ubus" "requires CONFIG_PACKAGE_uhttpd-mod-ubus=y"
 expect_fail_without "CONFIG_PACKAGE_rpcd-mod-luci" "requires CONFIG_PACKAGE_rpcd-mod-luci=y"
-expect_fail_without "CONFIG_PACKAGE_luci-i18n-base-zh-cn" "requires CONFIG_PACKAGE_luci-i18n-base-zh-cn=y"
 expect_fail_without "CONFIG_PACKAGE_luci-app-irqbalance" "requires CONFIG_PACKAGE_luci-app-irqbalance=y"
 expect_fail_without "CONFIG_PACKAGE_intel-microcode" "requires CONFIG_PACKAGE_intel-microcode=y"
 expect_fail_without "CONFIG_PACKAGE_kmod-e1000e" "requires CONFIG_PACKAGE_kmod-e1000e=y"
 expect_fail_without "CONFIG_PACKAGE_kmod-nvme" "requires CONFIG_PACKAGE_kmod-nvme=y"
 expect_fail_without_theme
-expect_fail_without_luci_language
 expect_fail_without_performance_overlay
 
 echo "Config audit fixture test passed."

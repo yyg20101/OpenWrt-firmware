@@ -67,7 +67,6 @@ my_profile:
 - `storage.config`：磁盘、文件系统、NVMe/SATA/NFS 支持
 - `usb-mobile.config`：USB 外设、USB 网卡、移动网络支持
 - `proxy.config`：DNS/代理相关共享包
-- `luci-zh-cn.config`：官方 LuCI 简体中文语言项，插件翻译包跟随 LuCI feed 的默认规则
 - `luci-web.config`：仅供未启用上游 LuCI 默认包集合的 fork/source 分支显式选择 LuCI Web 入口
 - `samba.config`：Samba4 文件共享栈，并显式禁用 autosamba
 
@@ -95,7 +94,7 @@ find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-cache-key-policy.sh
-bash scripts/ci/validate-luci-zh-cn-config.sh
+bash scripts/ci/validate-luci-default-policy.sh
 bash scripts/ci/validate-passwall-overlay.sh
 bash scripts/ci/validate-lede-small-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
@@ -111,7 +110,7 @@ Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 `cache
 
 当前 profile 不覆盖上游 `feeds.conf.default`。`coolsnowwolf/lede` 使用官方声明的 `coolsnowwolf/luci.git;openwrt-25.12`；官方 `immortalwrt/immortalwrt` profile 跟随 `openwrt-25.12`，并使用官方声明的 `immortalwrt/luci.git;openwrt-25.12`；fork/衍生 profile 继续使用其源码分支声明的 LuCI feed。
 
-LuCI 中文支持只选择 `CONFIG_LUCI_LANG_zh_Hans=y`。上游 LuCI `luci.mk` 会把 `zh_Hans` 映射为 `zh-cn` 翻译包，并按已安装 LuCI 模块自动带出对应 `luci-i18n` 包；本地不逐个硬编码插件中文包。LEDE `master` 和官方 ImmortalWrt `openwrt-25.12` 已在上游 `DEFAULT_PACKAGES` 中选择 LuCI；未启用该上游默认的 fork/衍生分支通过 `luci-web.config` 显式选择 `CONFIG_PACKAGE_luci=y`。ImmortalWrt 的 `luci` 元包默认依赖 `luci-light`，`luci-light` 默认带 `luci-theme-bootstrap`、`uhttpd` 和 `uhttpd-mod-ubus`，主题与 uHTTPd 入口保持官方默认。本地也不硬编码 `luci-base`、LuCI runtime/lib 等依赖，只在审计里校验 defconfig 展开结果。
+官方 LEDE `master` 和官方 ImmortalWrt `openwrt-25.12` 的 LuCI、主题和中文相关默认项均跟随上游 `DEFAULT_PACKAGES` 与 LuCI feed 规则；本地不再写入 `CONFIG_LUCI_LANG_zh_Hans` 或 `luci-i18n-*` 配置。未启用上游 LuCI 默认包集合的 fork/衍生分支仍可通过 `luci-web.config` 显式选择 `CONFIG_PACKAGE_luci=y`。配置审计只检查 LuCI Web 基础能力、主题、uHTTPd/rpcd 等 defconfig 展开结果；中文 i18n 改为在编译后产物中检测，官方源构建必须在 `Packages.tar.gz` 里包含 `luci-i18n-base-zh-cn`。
 
 PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt-passwall-packages` 跟随官方 `main`，`luci-app-passwall` 主仓强制拉取官方最新 tag。
 
@@ -157,7 +156,7 @@ firmware-<profile>-<source-slug>-<branch>
 
 1. 用 `gh run view <run_id>` 确认 `Configure Firmware`、`Download Dependencies`、`Compile Firmware`、`Upload Firmware Artifact`、`Smoke X86 Artifact`、`Publish GitHub Release` 均成功。
 2. 下载并检查较小的 `config-audit-*`、`compile-log-*`、`smoke-x86-*` artifacts，确认 `missing-luci-apps.txt` 为空、compile log 无失败包、smoke summary 为 `Static checks: passed`。
-3. 用 `gh release view <tag> --json assets` 检查 Release assets，确认固件镜像、`Packages.tar.gz`、manifest、provenance、`sha256sums.txt` 均已上传。
+3. 用 `gh release view <tag> --json assets` 检查 Release assets，确认固件镜像、`Packages.tar.gz`、manifest、provenance、`compiled-luci-i18n-report.md`、`sha256sums.txt` 均已上传，并确认官方源的 `compiled-luci-i18n-report.md` 显示 `Packages.tar.gz luci-i18n-base-zh-cn: found`。
 4. 将 Release asset `digest` 与 `sha256sums.txt` 中对应文件的 sha256 对齐验证。
 5. 实际下载一个小资产，例如 `openwrt-x86-64-generic-kernel.bin`，运行 `shasum -a 256 -c sha256sums.txt --ignore-missing`，确认 checksum 流程可用。
 

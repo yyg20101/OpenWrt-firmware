@@ -66,7 +66,7 @@ Current enabled profiles leave `feeds_conf` empty, so `config-feeds.sh prepare-f
 - The official `immortalwrt/immortalwrt` profile tracks `openwrt-25.12`, which declares `src-git luci https://github.com/immortalwrt/luci.git;openwrt-25.12`.
 - `VIKINGYFY/immortalwrt` is a fork/derived source and keeps the LuCI feed declared by its current source branch.
 
-LuCI Chinese support follows upstream LuCI rules. The shared fragment selects `CONFIG_LUCI_LANG_zh_Hans=y`; upstream `luci.mk` maps `zh_Hans` to `zh-cn` package aliases and creates matching `luci-i18n` packages for installed modules. The config audit verifies the defconfig result contains `CONFIG_PACKAGE_luci-i18n-base-zh-cn=y` without hard-coding per-plugin translation packages.
+LuCI Chinese support follows upstream source defaults and LuCI feed rules. Local profile fragments do not select `CONFIG_LUCI_LANG_zh_Hans` or hard-code `luci-i18n-*` packages. The config audit reports any defconfig-expanded LuCI language/i18n values for visibility, while the compiled artifact stage verifies official LEDE and official ImmortalWrt outputs contain `luci-i18n-base-zh-cn` in `Packages.tar.gz`.
 
 LEDE `master` and official ImmortalWrt `openwrt-25.12` include LuCI in their upstream `DEFAULT_PACKAGES`. Fork/derived source branches that do not enable that upstream default attach `scripts/common/config/luci-web.config` as a compatibility guard. ImmortalWrt's `luci` collection depends on `luci-light`; `luci-light` depends on `luci-theme-bootstrap`, `uhttpd`, and `uhttpd-mod-ubus`. The Bootstrap theme installs its own default `main.mediaurlbase`, and `luci-base` depends on `rpcd`/`rpcd-mod-luci` and adds the uHTTPd LuCI ucode handler through its post-install script. Local config therefore avoids hard-coding LuCI runtime/library dependencies and audits those defaults instead of replacing them.
 
@@ -246,7 +246,7 @@ find scripts -type f -name "*.sh" -print0 | xargs -0 -n1 bash -n
 bash scripts/ci/sync-workflow-target-options.sh "$PWD"
 bash scripts/ci/validate-profiles.sh
 bash scripts/ci/validate-cache-key-policy.sh
-bash scripts/ci/validate-luci-zh-cn-config.sh
+bash scripts/ci/validate-luci-default-policy.sh
 bash scripts/ci/validate-passwall-overlay.sh
 bash scripts/ci/validate-dependabot-coverage.sh
 bash scripts/ci/optimization-report.sh summary "$PWD"
