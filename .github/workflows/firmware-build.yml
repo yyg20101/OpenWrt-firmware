@@ -36,7 +36,7 @@ jobs:
       OPENWRT_DIR: openwrt
       CCACHE_DIR: ${{ github.workspace }}/openwrt/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}/openwrt
-      CCACHE_MAXSIZE: 900M
+      CCACHE_MAXSIZE: 2G
       CCACHE_COMPRESS: "true"
       CCACHE_COMPRESSLEVEL: "1"
       CCACHE_NOHASHDIR: "true"
@@ -167,7 +167,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "cache period: ${{ steps.source.outputs.cache_period }}"
-          echo "cache save policy: save only when no matched cache key exists"
+          echo "cache save policy: save when the primary cache key is not an exact hit"
           echo "ccache exact hit: ${{ steps.cache-ccache.outputs.cache-hit }}"
           echo "ccache matched key: ${{ steps.cache-ccache.outputs.cache-matched-key }}"
           echo "build accelerator exact hit: ${{ steps.cache-build-accel.outputs.cache-hit }}"
@@ -221,14 +221,14 @@ jobs:
           bash "$GITHUB_WORKSPACE/scripts/ci/build-artifacts.sh" compile-firmware "$OPENWRT_PATH" "$GITHUB_WORKSPACE" "$GITHUB_OUTPUT" "$GITHUB_ENV"
 
       - name: Save ccache
-        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-matched-key == ''
+        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
           key: ${{ steps.cache-ccache.outputs.cache-primary-key }}
 
       - name: Save Build Accelerator Cache
-        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-matched-key == ''
+        if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
           path: |

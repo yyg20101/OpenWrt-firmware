@@ -22,9 +22,9 @@ required = [
   'append_github_value "$GITHUB_ENV" "CACHE_PERIOD" "${cache_period}"',
   'append_github_value "$GITHUB_OUTPUT" "cache_period" "${cache_period}"',
   'steps.source.outputs.cache_period',
-  'steps.cache-ccache.outputs.cache-matched-key ==',
-  'steps.cache-build-accel.outputs.cache-matched-key ==',
-  'cache save policy: save only when no matched cache key exists'
+  "steps.cache-ccache.outputs.cache-hit != 'true'",
+  "steps.cache-build-accel.outputs.cache-hit != 'true'",
+  'cache save policy: save when the primary cache key is not an exact hit'
 ]
 
 required.each do |needle|
@@ -34,7 +34,7 @@ end
 forbidden = [
   'CACHE_WEEK',
   'cache_week',
-  "cache-hit != 'true'"
+  "cache-matched-key == ''"
 ]
 
 forbidden.each do |needle|
@@ -56,11 +56,11 @@ build_save = workflow[/name: Save Build Accelerator Cache.*?(?=\n      - name:|\
 fail!("missing Save ccache step") unless ccache_save
 fail!("missing Save Build Accelerator Cache step") unless build_save
 
-expected_ccache_condition = "if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-matched-key == ''"
-expected_build_condition = "if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-matched-key == ''"
+expected_ccache_condition = "if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-hit != 'true'"
+expected_build_condition = "if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-hit != 'true'"
 
-fail!("Save ccache must save only when no matched cache exists") unless ccache_save.include?(expected_ccache_condition)
-fail!("Save Build Accelerator Cache must save only when no matched cache exists") unless build_save.include?(expected_build_condition)
+fail!("Save ccache must save when the primary cache key is not an exact hit") unless ccache_save.include?(expected_ccache_condition)
+fail!("Save Build Accelerator Cache must save when the primary cache key is not an exact hit") unless build_save.include?(expected_build_condition)
 
 puts "Cache key policy validation passed."
 RUBY

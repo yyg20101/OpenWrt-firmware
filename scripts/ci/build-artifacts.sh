@@ -90,7 +90,7 @@ compile_firmware() {
   fi
 
   cd "${openwrt_path}"
-  ccache --max-size="${CCACHE_MAXSIZE:-900M}" || true
+  ccache --max-size="${CCACHE_MAXSIZE:-2G}" || true
   ccache -s || true
   : > "${compile_log}"
   echo "Compile jobs: ${jobs} (runner cores: $(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown), limit: ${max_jobs:-auto})" | tee -a "${compile_log}"

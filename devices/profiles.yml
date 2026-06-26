@@ -39,7 +39,6 @@ profiles:
     source_branch: openwrt-25.12
     firmware_tag: X86-64
     cache_group: x86_64
-    make_compile_jobs: 2
     groups:
       - x86_64_all
     config: devices/x86_64_immortalWrt/.config
