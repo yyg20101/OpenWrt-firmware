@@ -208,7 +208,7 @@ jobs:
       - name: Restore ccache
         id: cache-ccache
         if: steps.release_skip.outputs.skip != 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
           key: ccache-v2-${{ steps.profile.outputs.source_slug }}-${{ steps.profile.outputs.repo_branch }}-${{ steps.profile.outputs.ccache_group }}-${{ steps.source.outputs.cache_period }}
@@ -218,7 +218,7 @@ jobs:
       - name: Restore Build Accelerator Cache
         id: cache-build-accel
         if: steps.release_skip.outputs.skip != 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             ${{ env.OPENWRT_DIR }}/staging_dir/host
@@ -292,14 +292,14 @@ jobs:
 
       - name: Save ccache
         if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-ccache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.OPENWRT_DIR }}/.ccache
           key: ${{ steps.cache-ccache.outputs.cache-primary-key }}
 
       - name: Save Build Accelerator Cache
         if: steps.compile.outputs.status == 'success' && github.ref == 'refs/heads/main' && steps.cache-build-accel.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ env.OPENWRT_DIR }}/staging_dir/host
