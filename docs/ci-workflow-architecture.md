@@ -235,7 +235,7 @@ Release names and tags are stable per profile/source/branch. For example, `x86_6
 - Keep long shell logic in `scripts/ci/*.sh`, not workflow YAML.
 - Preserve profile output names when refactoring cache, artifact, or Release behavior.
 - Keep cache deletion workflows filtered by `prefix` or `ref`; dry-run is the only broad mode.
-- Keep cache keys isolated by source slug, source branch, and `cache_group`; save only when no matched cache key exists.
+- Keep cache keys isolated by source slug, source branch, and `cache_group`; save only when the primary cache key is not an exact hit.
 - Treat `x86_64_all` as the preferred preflight target for build and smoke validation before broader profile groups.
 - Treat `release=true` as the default for firmware artifact validation so Release assets, asset digests, `sha256sums.txt`, and small-asset checksum checks are exercised.
 - Run local validation before pushing:

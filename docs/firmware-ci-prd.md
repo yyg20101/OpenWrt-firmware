@@ -32,15 +32,15 @@
   - `firmware-build.yml` does not hard-code device ids.
   - Profiles can cap compile parallelism with `make_compile_jobs` when a source tree is memory-sensitive on GitHub-hosted runners.
   - x86 profiles are verified first with `target=x86_64_all` before broader profile groups are treated as stable.
-  - Cache keys include source slug, branch, cache group, and the current monthly cache period; fallback restore can reuse earlier matching periods, and cache save runs only when no matched cache key exists. `PROFILE_HASH` is retained for Release metadata and health reports.
+  - Cache keys include source slug, branch, cache group, and the current monthly cache period; fallback restore can reuse earlier matching periods, and cache save runs only when the primary key is not an exact hit. `PROFILE_HASH` is retained for Release metadata and health reports.
   - `optimization-health.yml` can be manually run to generate read-only profile, matrix, and cache health reports.
-  - Cache maintenance uses dry-run by default and requires `prefix` or `ref` before deleting caches.
+  - Cache maintenance uses dry-run by default, runs daily for Actions storage, and requires `prefix` or `ref` before deleting caches.
   - Release publishing is disabled by default and can be enabled per dispatch with `release=true`.
 
 - **Non-Goals**:
   - No web UI for device management.
   - No automatic scheduled update checker in this iteration.
-  - No automatic cleanup of old releases or workflow runs in this iteration.
+  - No automatic cleanup of old releases in this iteration.
   - No guarantee that upstream OpenWrt/feeds/package repositories are reproducible without pinning.
 
 ### 3. AI System Requirements (If Applicable)
@@ -62,6 +62,7 @@
   - GitHub Actions Cache for ccache and build accelerator cache.
   - GitHub Actions read-only health reporting for profile/matrix and cache state.
   - GitHub Artifacts for compile logs and firmware outputs.
+  - GitHub workflow run history for Actions logs and run metadata.
   - GitHub Releases for optional published firmware.
   - External OpenWrt source repositories and feeds.
   - GitHub package overlays are retried and recorded with their resolved ref/commit when package customization runs.

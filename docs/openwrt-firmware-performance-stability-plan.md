@@ -35,7 +35,7 @@
 - `scripts/ci/audit-config.sh` 已检查 x86 分区、GRUB、irqbalance、BBR/SQM/CAKE/IFB、LuCI/uHTTPd/rpcd、Samba4/autosamba 互斥和 VM 镜像裁剪要求。
 - `.github/workflows/firmware-build.yml` 已包含缓存 restore/save、配置审计、依赖下载、编译 fallback、产物整理、Release 元数据。
 - `.github/workflows/optimization-health.yml` 已能生成 profile、matrix 和缓存健康报告。
-- `.github/workflows/cache-maintenance.yml` 已提供每日 Actions 存储维护入口，自动清理过期 Artifacts 和旧 Cache；手动触发默认 dry-run，Cache 真实删除时仍要求指定 `prefix` 或 `ref`。
+- `.github/workflows/cache-maintenance.yml` 已提供每日 Actions 存储维护入口，调用 `scripts/ci/actions-storage-maintenance.sh` 自动清理过期 Artifacts、旧 Cache 和历史 workflow runs；手动触发默认 dry-run，Cache 真实删除时仍要求指定 `prefix` 或 `ref`。
 
 本计划基于以上能力继续推进，避免重复建设。
 
@@ -118,7 +118,7 @@ GitHub Actions 侧建议顺序：
 2. 触发 `Firmware CI` 的 `target=x86_64_all`，先验证两个 x86 profile。
 3. x86 稳定后再触发 `target=qualcommax_all`。
 4. 全部通过后再触发 `target=all`，并按需设置 `release=true`。
-5. 如 Actions 存储接近容量上限，先运行 `Cache Maintenance` dry-run，再按 `prefix` 或 `ref` 做真实 Cache 清理；过期 Artifacts 由每日维护任务自动清理。
+5. 如 Actions 存储接近容量上限，先运行 `Cache Maintenance` dry-run，再按 `prefix` 或 `ref` 做真实 Cache 清理；过期 Artifacts 和历史 workflow runs 由每日维护任务自动清理。
 
 ## 8. 风险与假设
 
@@ -127,7 +127,7 @@ GitHub Actions 侧建议顺序：
 | 上游源码和 feeds 跟随分支变化。 | 同一 profile 在不同时间构建结果不同。 | 保持 source commit、profile hash、包 overlay manifest 和漂移报告。 |
 | 插件体积持续增长。 | rootfs 可能逼近容量上限，尤其是 x86 以外目标。 | 不删必要插件；通过 rootfs 分区、配置分层和产物体积报告管理。 |
 | QEMU smoke 误报。 | 可能阻塞本来可用的固件产物。 | 先作为 x86 artifact 日志上传，稳定后再升级为强制 gate。 |
-| Cache 清理过度。 | 下次构建变慢，甚至重新编译工具链。 | 真实删除必须使用 `prefix` 或 `ref`，并保留匹配范围内最新缓存。 |
+| Actions 存储清理过度。 | 下次构建变慢，或缺少旧 workflow 日志。 | 真实 Cache 删除必须使用 `prefix` 或 `ref`；workflow run 清理保护当前 run、最新 firmware run 和每个 workflow 的最新运行。 |
 | runner 镜像或远程初始化脚本变化。 | 构建环境不可预测。 | 记录 runner、脚本来源和初始化日志，后续评估 checksum 或固定版本。 |
 
 ## 9. 完成定义

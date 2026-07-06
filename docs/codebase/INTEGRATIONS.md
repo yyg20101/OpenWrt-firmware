@@ -6,7 +6,7 @@
 
 | System | Type (API/DB/Queue/etc) | Purpose | Auth model | Criticality | Evidence |
 |--------|---------------------------|---------|------------|-------------|----------|
-| GitHub Actions | CI/CD platform | Runs build and lint workflows. | GitHub Actions context. | High | `.github/workflows/*.yml` |
+| GitHub Actions | CI/CD platform | Runs build and lint workflows; old workflow runs are pruned by scheduled storage maintenance. | GitHub Actions context. | High | `.github/workflows/*.yml`, `scripts/ci/actions-storage-maintenance.sh` |
 | GitHub Actions Cache | Cache service | Restores ccache and build accelerator directories; supports scheduled and filtered manual cleanup. | GitHub Actions context. | Medium | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
 | GitHub Artifacts | Artifact storage | Stores short-lived compile logs, smoke reports, and firmware outputs; scheduled cleanup protects the latest firmware-producing run. | GitHub Actions context. | High | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
 | GitHub Releases | Release hosting | Optionally publishes successful firmware builds and supports filtered manual cleanup. | `secrets.GITHUB_TOKEN`. | High | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
@@ -20,8 +20,9 @@
 
 | Store | Role | Access layer | Key risk | Evidence |
 |------|------|--------------|----------|----------|
-| GitHub Actions cache | Build acceleration. | `actions/cache@v5`; cleanup through GitHub REST API in `actions/github-script@v9`. | Cache key churn or stale toolchain artifacts can affect build time/correctness; real deletion requires `prefix` or `ref`. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
-| GitHub Artifacts | Compile logs and firmware outputs. | `actions/upload-artifact@v7`; cleanup through GitHub REST API in `actions/github-script@v9`. | Large firmware and smoke artifacts can exhaust account storage if retention or cleanup fails. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
+| GitHub Actions cache | Build acceleration. | `actions/cache@v6`; cleanup through GitHub REST API in `scripts/ci/actions-storage-maintenance.sh`. | Cache key churn or stale toolchain artifacts can affect build time/correctness; real deletion requires `prefix` or `ref`. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
+| GitHub Artifacts | Compile logs and firmware outputs. | `actions/upload-artifact@v7`; cleanup through GitHub REST API in `scripts/ci/actions-storage-maintenance.sh`. | Large firmware and smoke artifacts can exhaust account storage if retention or cleanup fails. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
+| GitHub workflow runs | Logs and run metadata. | GitHub REST API in `scripts/ci/actions-storage-maintenance.sh`. | Historical runs can accumulate noisy logs and make storage maintenance harder to audit. | `.github/workflows/cache-maintenance.yml`, `scripts/ci/actions-storage-maintenance.sh` |
 | GitHub Releases | Optional firmware distribution. | `ncipollo/release-action@v1`; filtered cleanup through GitHub REST API in `actions/github-script@v9`. | Release tags are stable per profile/source/branch and successful rebuilds replace the current asset set; only single-profile publishes become GitHub Latest. | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
 
 ### 3) Secrets and Credentials Handling
@@ -38,8 +39,9 @@
 - Release publishing is disabled by default and optional via `release=true`.
 - Multi-profile publishing does not update the GitHub Latest release marker.
 - A successful rebuild updates the existing profile/source/branch Release and replaces old Release assets.
-- Cache maintenance defaults to dry-run and refuses real deletion unless `prefix` or `ref` narrows the scope.
-- The update-checker and cleanup workflows were removed from the default architecture to reduce hidden side effects.
+- Cache maintenance defaults to dry-run for manual runs and refuses real cache deletion unless `prefix` or `ref` narrows the scope.
+- Scheduled Actions storage maintenance prunes artifacts, caches, and historical workflow runs while protecting the current run and latest firmware-producing run.
+- The update-checker workflow was removed from the default architecture to reduce hidden side effects.
 - Runner package installation, build environment script download, source clone, feeds update/install, and package overlay GitHub operations use retry/backoff wrappers.
 
 ### 5) Observability for Integrations
