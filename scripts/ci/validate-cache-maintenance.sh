@@ -32,6 +32,8 @@ def fail!(message)
 end
 
 fail!("mode input must exist") unless inputs.key?("mode")
+fail!("workflow_dispatch must expose only mode input") unless inputs.keys == ["mode"]
+fail!("mode must be required") unless inputs.dig("mode", "required") == true
 fail!("mode must default to preview") unless inputs.dig("mode", "default") == "preview"
 fail!("mode must be a choice input") unless inputs.dig("mode", "type") == "choice"
 fail!("mode options must be preview and cleanup") unless inputs.dig("mode", "options") == ["preview", "cleanup"]
