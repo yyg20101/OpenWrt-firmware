@@ -6,47 +6,47 @@ on:
   workflow_dispatch:
     inputs:
       older_than_days:
-        description: "Delete caches not accessed for at least this many days"
+        description: "删除至少多少天未访问的缓存"
         required: true
         default: "7"
         type: string
       prefix:
-        description: "Only consider caches whose key starts with this prefix"
+        description: "仅处理缓存 key 以此前缀开头的缓存；留空表示不按前缀过滤"
         required: false
         default: ""
         type: string
       ref:
-        description: "Only consider caches for this ref, for example refs/heads/main"
+        description: "仅处理指定 ref 的缓存，例如 refs/heads/main"
         required: false
         default: "refs/heads/main"
         type: string
       keep_latest:
-        description: "Keep this many newest matched caches even if they are old"
+        description: "每个缓存分组保留的最新缓存数量，即使这些缓存已超过清理天数"
         required: true
         default: "1"
         type: string
       artifact_older_than_days:
-        description: "Delete non-protected artifacts created at least this many days ago"
+        description: "删除至少多少天前创建且未受保护的产物"
         required: true
         default: "2"
         type: string
       artifact_keep_latest_runs:
-        description: "Keep artifacts from this many newest firmware-producing runs"
+        description: "保留最近多少次产生 firmware 产物的运行记录及其产物"
         required: true
         default: "1"
         type: string
       workflow_run_older_than_days:
-        description: "Delete completed workflow runs created at least this many days ago"
+        description: "删除至少多少天前创建且已完成的 workflow 运行记录"
         required: true
         default: "7"
         type: string
       workflow_run_keep_latest_per_workflow:
-        description: "Keep this many newest runs per workflow"
+        description: "每个 workflow 保留的最新运行记录数量"
         required: true
         default: "3"
         type: string
       dry_run:
-        description: "List artifacts, caches, and workflow runs without deleting them"
+        description: "仅列出将清理的产物、缓存和 workflow 运行记录，不实际删除"
         required: true
         default: true
         type: boolean
