@@ -31,18 +31,25 @@ def fail!(message)
   exit 1
 end
 
-fail!("dry_run must default to true") unless inputs.dig("dry_run", "default") == true
-fail!("keep_latest must default to 1") unless inputs.dig("keep_latest", "default").to_s == "1"
-fail!("prefix input must exist") unless inputs.key?("prefix")
-fail!("ref input must exist") unless inputs.key?("ref")
-fail!("ref input must default to refs/heads/main") unless inputs.dig("ref", "default") == "refs/heads/main"
-fail!("artifact_older_than_days input must exist") unless inputs.key?("artifact_older_than_days")
-fail!("artifact_keep_latest_runs input must exist") unless inputs.key?("artifact_keep_latest_runs")
-fail!("artifact_keep_latest_runs must default to 1") unless inputs.dig("artifact_keep_latest_runs", "default").to_s == "1"
-fail!("workflow_run_older_than_days input must exist") unless inputs.key?("workflow_run_older_than_days")
-fail!("workflow_run_older_than_days must default to 7") unless inputs.dig("workflow_run_older_than_days", "default").to_s == "7"
-fail!("workflow_run_keep_latest_per_workflow input must exist") unless inputs.key?("workflow_run_keep_latest_per_workflow")
-fail!("workflow_run_keep_latest_per_workflow must default to 3") unless inputs.dig("workflow_run_keep_latest_per_workflow", "default").to_s == "3"
+fail!("mode input must exist") unless inputs.key?("mode")
+fail!("mode must default to preview") unless inputs.dig("mode", "default") == "preview"
+fail!("mode must be a choice input") unless inputs.dig("mode", "type") == "choice"
+fail!("mode options must be preview and cleanup") unless inputs.dig("mode", "options") == ["preview", "cleanup"]
+
+forbidden_inputs = %w[
+  older_than_days
+  prefix
+  ref
+  keep_latest
+  artifact_older_than_days
+  artifact_keep_latest_runs
+  workflow_run_older_than_days
+  workflow_run_keep_latest_per_workflow
+  dry_run
+]
+forbidden_inputs.each do |input|
+  fail!("#{input} input must not be exposed in workflow_dispatch") if inputs.key?(input)
+end
 fail!("cache maintenance must run on a schedule") unless schedule.any? { |entry| entry["cron"].to_s.strip != "" }
 
 permissions = workflow["permissions"] || {}
@@ -55,9 +62,15 @@ fail!("real cache deletion must require prefix or ref") unless script.include?('
 fail!("cache cleanup workflow must call maintenance script") unless body.include?("bash scripts/ci/actions-storage-maintenance.sh")
 fail!("workflow must pass GitHub token to maintenance script") unless body.include?("GH_TOKEN: ${{ github.token }}")
 fail!("workflow must pass current run id to maintenance script") unless body.include?("CURRENT_RUN_ID: ${{ github.run_id }}")
-fail!("workflow inputs must have scheduled cache defaults") unless body.include?("CACHE_OLDER_THAN_DAYS: ${{ inputs.older_than_days || '7' }}")
-fail!("workflow inputs must have scheduled workflow run defaults") unless body.include?("WORKFLOW_RUN_OLDER_THAN_DAYS: ${{ inputs.workflow_run_older_than_days || '7' }}")
-fail!("dry_run must be forwarded to maintenance script") unless body.include?("DRY_RUN: ${{ inputs.dry_run || 'false' }}")
+fail!("preview mode must map to dry-run") unless body.include?("DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && 'true' || 'false' }}")
+fail!("workflow must keep fixed artifact age default") unless body.include?('ARTIFACT_OLDER_THAN_DAYS: "2"')
+fail!("workflow must keep fixed protected firmware run default") unless body.include?('ARTIFACT_KEEP_LATEST_RUNS: "1"')
+fail!("workflow must keep fixed cache age default") unless body.include?('CACHE_OLDER_THAN_DAYS: "7"')
+fail!("workflow must keep fixed cache prefix default") unless body.include?('CACHE_PREFIX: ""')
+fail!("workflow must keep fixed cache ref default") unless body.include?("CACHE_REF: refs/heads/main")
+fail!("workflow must keep fixed cache group retention default") unless body.include?('CACHE_KEEP_LATEST: "1"')
+fail!("workflow must keep fixed workflow run age default") unless body.include?('WORKFLOW_RUN_OLDER_THAN_DAYS: "7"')
+fail!("workflow must keep fixed workflow run retention default") unless body.include?('WORKFLOW_RUN_KEEP_LATEST_PER_WORKFLOW: "3"')
 fail!("cache cleanup must use explicit REST pagination") unless script.include?('actions/caches?per_page=100')
 fail!("artifact cleanup must use explicit REST pagination") unless script.include?('actions/artifacts?per_page=100')
 fail!("workflow run cleanup must use explicit REST pagination") unless script.include?('actions/runs?per_page=100')

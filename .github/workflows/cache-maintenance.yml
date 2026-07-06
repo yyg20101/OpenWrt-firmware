@@ -5,51 +5,14 @@ on:
     - cron: "25 18 * * *"
   workflow_dispatch:
     inputs:
-      older_than_days:
-        description: "删除至少多少天未访问的缓存"
+      mode:
+        description: "执行模式：preview 仅预览不删除；cleanup 按默认策略立即清理"
         required: true
-        default: "7"
-        type: string
-      prefix:
-        description: "仅处理缓存 key 以此前缀开头的缓存；留空表示不按前缀过滤"
-        required: false
-        default: ""
-        type: string
-      ref:
-        description: "仅处理指定 ref 的缓存，例如 refs/heads/main"
-        required: false
-        default: "refs/heads/main"
-        type: string
-      keep_latest:
-        description: "每个缓存分组保留的最新缓存数量，即使这些缓存已超过清理天数"
-        required: true
-        default: "1"
-        type: string
-      artifact_older_than_days:
-        description: "删除至少多少天前创建且未受保护的产物"
-        required: true
-        default: "2"
-        type: string
-      artifact_keep_latest_runs:
-        description: "保留最近多少次产生 firmware 产物的运行记录及其产物"
-        required: true
-        default: "1"
-        type: string
-      workflow_run_older_than_days:
-        description: "删除至少多少天前创建且已完成的 workflow 运行记录"
-        required: true
-        default: "7"
-        type: string
-      workflow_run_keep_latest_per_workflow:
-        description: "每个 workflow 保留的最新运行记录数量"
-        required: true
-        default: "3"
-        type: string
-      dry_run:
-        description: "仅列出将清理的产物、缓存和 workflow 运行记录，不实际删除"
-        required: true
-        default: true
-        type: boolean
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - cleanup
 
 permissions:
   actions: write
@@ -67,15 +30,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
-          ARTIFACT_OLDER_THAN_DAYS: ${{ inputs.artifact_older_than_days || '2' }}
-          ARTIFACT_KEEP_LATEST_RUNS: ${{ inputs.artifact_keep_latest_runs || '1' }}
-          CACHE_OLDER_THAN_DAYS: ${{ inputs.older_than_days || '7' }}
-          CACHE_PREFIX: ${{ inputs.prefix || '' }}
-          CACHE_REF: ${{ inputs.ref || 'refs/heads/main' }}
-          CACHE_KEEP_LATEST: ${{ inputs.keep_latest || '1' }}
-          WORKFLOW_RUN_OLDER_THAN_DAYS: ${{ inputs.workflow_run_older_than_days || '7' }}
-          WORKFLOW_RUN_KEEP_LATEST_PER_WORKFLOW: ${{ inputs.workflow_run_keep_latest_per_workflow || '3' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && 'true' || 'false' }}
+          ARTIFACT_OLDER_THAN_DAYS: "2"
+          ARTIFACT_KEEP_LATEST_RUNS: "1"
+          CACHE_OLDER_THAN_DAYS: "7"
+          CACHE_PREFIX: ""
+          CACHE_REF: refs/heads/main
+          CACHE_KEEP_LATEST: "1"
+          WORKFLOW_RUN_OLDER_THAN_DAYS: "7"
+          WORKFLOW_RUN_KEEP_LATEST_PER_WORKFLOW: "3"
           CURRENT_RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
