@@ -35,7 +35,7 @@
 - `scripts/ci/audit-config.sh` 已检查 x86 分区、GRUB、irqbalance、BBR/SQM/CAKE/IFB、LuCI/uHTTPd/rpcd、Samba4/autosamba 互斥和 VM 镜像裁剪要求。
 - `.github/workflows/firmware-build.yml` 已包含缓存 restore/save、配置审计、依赖下载、编译 fallback、产物整理、Release 元数据。
 - `.github/workflows/optimization-health.yml` 已能生成 profile、matrix 和缓存健康报告。
-- `.github/workflows/cache-maintenance.yml` 已提供 dry-run 优先的缓存清理入口，并要求真实删除时指定 `prefix` 或 `ref`。
+- `.github/workflows/cache-maintenance.yml` 已提供每日 Actions 存储维护入口，自动清理过期 Artifacts 和旧 Cache；手动触发默认 dry-run，Cache 真实删除时仍要求指定 `prefix` 或 `ref`。
 
 本计划基于以上能力继续推进，避免重复建设。
 
@@ -64,7 +64,7 @@ P1 的目标是缩短构建反馈周期，并把性能配置从“启用了一�
 | 任务 | 范围 | 预期改动 | 验收标准 |
 |------|------|----------|----------|
 | P1-01 缓存命中与耗时报告 | `.github/workflows/firmware-build.yml`、`scripts/ci/optimization-report.sh` | 记录 ccache/build-accel 是否精确命中、matched key、缓存保存条件、下载耗时、编译耗时、产物整理耗时。 | 每次构建 summary 能看到命中状态和阶段耗时；Optimization Health 能汇总缓存体积和最近访问时间。 |
-| P1-02 cache key 分组策略复核 | `devices/profiles.yml`、`.github/workflows/firmware-build.yml` | 保持 key 由 source slug、branch、cache group、monthly cache period 构成；restore 使用同 source/branch/group 的前缀 fallback；save 仅在 `cache-matched-key` 为空时执行。 | x86 两个 profile 不因不同源码混用工具链缓存；Qualcommax profile 按 source/branch 形成隔离；命中 fallback 时不会额外保存重复 cache。 |
+| P1-02 cache key 分组策略复核 | `devices/profiles.yml`、`.github/workflows/firmware-build.yml` | 保持 key 由 source slug、branch、cache group、monthly cache period 构成；restore 使用同 source/branch/group 的前缀 fallback；save 仅在 primary key 非 exact hit 时执行。 | x86 两个 profile 不因不同源码混用工具链缓存；Qualcommax profile 按 source/branch 形成隔离；命中 fallback 后最多生成当前月 cache，旧周期由定时维护清理。 |
 | P1-03 编译并行度策略 | `devices/profiles.yml`、`scripts/ci/build-artifacts.sh` | 按 profile 设置 `make_compile_jobs`，对内存敏感源码保持保守值，对稳定源码允许使用 runner CPU 数。 | 构建日志明确显示实际 jobs、runner cores、profile limit；失败 fallback 到 `-j1` 后仍保留完整日志。 |
 | P1-04 性能配置分层 | `scripts/common/config/*.config`、`devices/profiles.yml` | 保持基础插件不移除；把网络性能、存储、x86 硬件、代理、Samba 等能力按片段保持清晰边界。 | 新增或调整 profile 时能通过 `config_fragments` 看出性能能力来源；低存储目标可评估是否需要独立 profile，而不是删插件。 |
 | P1-05 运行时默认值审计 | `files/etc/uci-defaults/99-performance-defaults`、`scripts/ci/audit-config.sh` | 确保 sysctl 默认值保守，不强制启用会破坏用户网络的激进参数；审计 overlay 必须存在。 | 配置审计缺少 overlay 时失败；默认值说明清晰，可在产物 config-audit 中追溯。 |
@@ -118,7 +118,7 @@ GitHub Actions 侧建议顺序：
 2. 触发 `Firmware CI` 的 `target=x86_64_all`，先验证两个 x86 profile。
 3. x86 稳定后再触发 `target=qualcommax_all`。
 4. 全部通过后再触发 `target=all`，并按需设置 `release=true`。
-5. 如 cache 接近容量上限，先运行 `Cache Maintenance` dry-run，再按 `prefix` 或 `ref` 做真实清理。
+5. 如 Actions 存储接近容量上限，先运行 `Cache Maintenance` dry-run，再按 `prefix` 或 `ref` 做真实 Cache 清理；过期 Artifacts 由每日维护任务自动清理。
 
 ## 8. 风险与假设
 

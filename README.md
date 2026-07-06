@@ -19,8 +19,9 @@
 
 - `Cache Maintenance`
   - 文件：`.github/workflows/cache-maintenance.yml`
-  - 手动清理 GitHub Actions Cache，默认 dry-run 并保留匹配范围内最新 2 个缓存。
-  - 真实删除时必须指定 `prefix` 或 `ref`，避免误删全部缓存。
+  - 每日自动清理 GitHub Actions Artifacts 和 Cache；手动触发默认 dry-run。
+  - Cache 真实删除时必须指定 `prefix` 或 `ref`，并默认只保留匹配范围内最新 1 个缓存。
+  - Artifact 清理会保护最新 1 次产生 firmware 的 run，并清理过期的大体积构建/烟测产物。
 
 - `CI Lint`
   - 文件：`.github/workflows/ci-lint.yml`
@@ -104,7 +105,7 @@ bash scripts/ci/validate-dependabot-coverage.sh
 
 `Firmware Build` 使用两类缓存：`ccache` 和 build accelerator。Cache Key 保持按 cache 类型、版本、source slug、source branch、`cache_group` 隔离，并使用月度 `CACHE_PERIOD` 作为刷新周期，避免周序变化造成过多重复缓存。
 
-Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 `cache-matched-key` 为空时执行。也就是说，命中 exact key 或 fallback key 都不会再保存新的重复缓存。Cache 接近容量上限时，先运行 `Cache Maintenance` dry-run；真实删除仍必须指定 `prefix` 或 `ref`。
+Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 primary key 非 exact hit 时执行。`Cache Maintenance` 每日自动清理过期 Artifacts 和旧 Cache；容量接近上限时，先手动运行 dry-run，再按 `prefix` 或 `ref` 做真实删除。
 
 ## Feeds and LuCI
 
@@ -121,7 +122,7 @@ PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt
 1. 手动运行 `Optimization Health`，确认 profile、上游漂移、matrix 和 cache 分组状态。
 2. 先触发 `Firmware CI` 的 `target=x86_64_all`，确认两个 x86 profile 生成 artifact 并通过 x86 smoke。
 3. x86 稳定后再触发 `target=qualcommax_all` 或 `target=all`。
-4. Cache 接近容量上限时，先运行 `Cache Maintenance` dry-run；真实删除必须指定 `prefix` 或 `ref`，并保留匹配范围内最新缓存。
+4. Actions 存储由 `Cache Maintenance` 每日自动维护；容量接近上限时，先运行 dry-run，再按 `prefix` 或 `ref` 做真实 Cache 删除，并保留匹配范围内最新缓存。
 5. 后续需要验收固件产物的 `Firmware CI` 测试默认传入 `release=true`，让成功结果走 Release asset 上传路径；优先对单个 profile 做最终发布验证，分组或 `all` 发布不会抢占 GitHub Latest。
 
 每日自动构建由 `Firmware CI` 的 `schedule` 触发，默认构建 `x86_64_all` 并发布 Release assets。该任务用于持续验证 x86 LEDE 与 x86 ImmortalWrt 两个稳定 profile；Qualcommax 和 `all` 仍按需手动触发。

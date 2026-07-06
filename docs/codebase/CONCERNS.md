@@ -34,7 +34,7 @@
 | OpenWrt builds are compute/disk intensive. | `.github/workflows/firmware-build.yml` | Workflow maximizes build space and restores caches. | More profiles increase runtime and cache churn. | Monitor cache hit rate and add profile grouping if needed. |
 | Network performance packages add footprint. | `scripts/common/config/network-performance.config` | BBR, SQM/CAKE, and IFB are enabled for all profiles. | Smaller flash targets may need a slimmer profile. | Keep the performance config as a separate fragment so low-storage devices can opt out. |
 | Network-heavy package/feed operations are serial. | `.github/workflows/firmware-build.yml`, `scripts/common/Packages.sh` | Feeds and package overlays run during every build. | Network stalls can dominate runtime. | Retry/backoff is now applied to feeds and package overlay network calls; add timeout tuning if failures persist. |
-| Manual cache deletion can remove useful accelerators if scoped too broadly. | `.github/workflows/cache-maintenance.yml` | Real deletion now requires `prefix` or `ref` and keeps two newest matches by default. | Wrong filter choices can still delete useful cache groups. | Run dry-run first and keep cache keys grouped by source/profile family. |
+| Manual cache deletion can remove useful accelerators if scoped too broadly. | `.github/workflows/cache-maintenance.yml` | Real deletion now requires `prefix` or `ref` and keeps the newest cache per group by default; scheduled cleanup scopes to `refs/heads/main`. | Wrong manual filter choices can still delete useful cache groups. | Run dry-run first and keep cache keys grouped by source/profile family. |
 
 ### 5) Fragile/High-Churn Areas
 

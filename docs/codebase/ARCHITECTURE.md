@@ -59,7 +59,7 @@ workflow_dispatch/repository_dispatch
 | Network retry/backoff | `retry.sh`, `firmware-build.yml`, `config-feeds.sh`, `Packages.sh` | Reduces transient apt/source/feed/package GitHub failures without masking final errors. |
 | Artifact pruning | `build-artifacts.sh`, `x86.config` | Keeps x86 compressed raw images and packages while excluding VM-specific disk formats from uploaded artifacts. |
 | Profile hash provenance | `profiles.sh`, `release-maintenance.sh`, `release-skip.sh` | Identifies whether a stable Release was built with the current profile config/hooks/fragments. |
-| Filtered cache deletion | `cache-maintenance.yml` | Allows broad dry-runs, but requires `prefix` or `ref` before deleting caches. |
+| Actions storage maintenance | `cache-maintenance.yml` | Runs scheduled artifact/cache cleanup; manual dry-runs remain broad, but real cache deletion requires `prefix` or `ref`. |
 
 ### 5) Known Architectural Risks
 

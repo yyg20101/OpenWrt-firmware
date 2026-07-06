@@ -56,7 +56,7 @@ This repository uses a declarative profile + reusable workflow structure for fir
 
 `firmware-build.yml` restores two cache families: `ccache-v2` and `build-accel-v2`. Primary keys are grouped by cache type, version, source repository slug, source branch, profile `cache_group`, and monthly cache period. Restore keys intentionally stop at the source/branch/group prefix so a previous period can accelerate the build without crossing toolchain boundaries.
 
-Cache save is stricter than exact-hit detection: save steps run only when `cache-matched-key` is empty. Exact hits and fallback hits both skip saving, which prevents a restored previous-period cache from creating a redundant new period cache on every calendar rollover.
+Cache save runs only when the primary cache key is not an exact hit. Exact hits skip saving; fallback hits can seed the current monthly key once, while scheduled cleanup removes old periods after the newer cache is in use.
 
 ## Feeds, LuCI, and Overlays
 

@@ -51,4 +51,4 @@ jobs:
           name: optimization-health-${{ github.run_id }}
           path: optimization-health/*
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3

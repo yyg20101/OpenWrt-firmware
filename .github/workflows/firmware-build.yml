@@ -274,7 +274,7 @@ jobs:
           name: config-audit-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ github.workspace }}/config-audit/*
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Download Dependencies
         if: steps.release_skip.outputs.skip != 'true'
@@ -314,7 +314,7 @@ jobs:
           name: compile-log-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ github.workspace }}/compile.log
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Generate Build Metrics
         if: always() && steps.release_skip.outputs.skip != 'true' && steps.compile.outcome != 'skipped'
@@ -329,7 +329,7 @@ jobs:
           name: build-metrics-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ github.workspace }}/build-metrics/*
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Dump Failure Context
         if: steps.compile.outputs.status == 'failure'
@@ -344,7 +344,7 @@ jobs:
           name: failure-context-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ github.workspace }}/failure-context/*
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Fail Build On Compile Error
         if: steps.compile.outputs.status == 'failure'
@@ -383,7 +383,7 @@ jobs:
           name: firmware-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ steps.artifacts.outputs.firmware_path }}/*
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 2
 
       - name: Smoke X86 Artifact / 烟测 X86 产物
         if: steps.compile.outputs.status == 'success' && startsWith(inputs.profile, 'x86_64_')
@@ -400,7 +400,7 @@ jobs:
           name: smoke-x86-${{ inputs.profile }}-${{ github.run_id }}
           path: ${{ github.workspace }}/smoke-x86/*
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 1
 
       - name: Publish GitHub Release
         if: steps.compile.outputs.status == 'success' && inputs.release

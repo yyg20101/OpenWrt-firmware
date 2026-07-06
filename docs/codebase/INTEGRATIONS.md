@@ -7,8 +7,8 @@
 | System | Type (API/DB/Queue/etc) | Purpose | Auth model | Criticality | Evidence |
 |--------|---------------------------|---------|------------|-------------|----------|
 | GitHub Actions | CI/CD platform | Runs build and lint workflows. | GitHub Actions context. | High | `.github/workflows/*.yml` |
-| GitHub Actions Cache | Cache service | Restores ccache and build accelerator directories; supports filtered manual cleanup. | GitHub Actions context. | Medium | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
-| GitHub Artifacts | Artifact storage | Stores compile logs and firmware outputs for 14 days. | GitHub Actions context. | High | `.github/workflows/firmware-build.yml` |
+| GitHub Actions Cache | Cache service | Restores ccache and build accelerator directories; supports scheduled and filtered manual cleanup. | GitHub Actions context. | Medium | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
+| GitHub Artifacts | Artifact storage | Stores short-lived compile logs, smoke reports, and firmware outputs; scheduled cleanup protects the latest firmware-producing run. | GitHub Actions context. | High | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
 | GitHub Releases | Release hosting | Optionally publishes successful firmware builds and supports filtered manual cleanup. | `secrets.GITHUB_TOKEN`. | High | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
 | External OpenWrt source repositories | Git repositories | Cloned and compiled per profile. | Public HTTPS clone. | High | `devices/profiles.yml`, `.github/workflows/firmware-build.yml` |
 | OpenWrt/ImmortalWrt build environment script | Remote shell script | Initializes runner build prerequisites. | Public HTTPS fetch through `curl`. | High | `.github/workflows/firmware-build.yml` |
@@ -20,9 +20,9 @@
 
 | Store | Role | Access layer | Key risk | Evidence |
 |------|------|--------------|----------|----------|
-| GitHub Actions cache | Build acceleration. | `actions/cache@v5`; cleanup through GitHub REST API in `actions/github-script@v8`. | Cache key churn or stale toolchain artifacts can affect build time/correctness; real deletion requires `prefix` or `ref`. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
-| GitHub Artifacts | Compile logs and firmware outputs. | `actions/upload-artifact@v7`. | Retention is 14 days. | `.github/workflows/firmware-build.yml` |
-| GitHub Releases | Optional firmware distribution. | `ncipollo/release-action@v1`; filtered cleanup through GitHub REST API in `actions/github-script@v8`. | Release tags are stable per profile/source/branch and successful rebuilds replace the current asset set; only single-profile publishes become GitHub Latest. | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
+| GitHub Actions cache | Build acceleration. | `actions/cache@v5`; cleanup through GitHub REST API in `actions/github-script@v9`. | Cache key churn or stale toolchain artifacts can affect build time/correctness; real deletion requires `prefix` or `ref`. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
+| GitHub Artifacts | Compile logs and firmware outputs. | `actions/upload-artifact@v7`; cleanup through GitHub REST API in `actions/github-script@v9`. | Large firmware and smoke artifacts can exhaust account storage if retention or cleanup fails. | `.github/workflows/firmware-build.yml`, `.github/workflows/cache-maintenance.yml` |
+| GitHub Releases | Optional firmware distribution. | `ncipollo/release-action@v1`; filtered cleanup through GitHub REST API in `actions/github-script@v9`. | Release tags are stable per profile/source/branch and successful rebuilds replace the current asset set; only single-profile publishes become GitHub Latest. | `.github/workflows/firmware-build.yml`, `.github/workflows/release-maintenance.yml`, `scripts/ci/release-maintenance.sh` |
 
 ### 3) Secrets and Credentials Handling
 
