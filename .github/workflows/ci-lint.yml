@@ -85,11 +85,6 @@ jobs:
           set -euo pipefail
           bash scripts/ci/validate-release-maintenance.sh
 
-      - name: Validate Release Skip Fixture / 校验无变化发布跳过夹具
-        run: |
-          set -euo pipefail
-          bash scripts/ci/test-release-skip.sh
-
       - name: Validate Build Metrics Fixture / 校验构建指标夹具
         run: |
           set -euo pipefail
@@ -105,11 +100,6 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/ci/test-artifacts-release.sh
-
-      - name: Validate X86 Smoke Fixture / 校验 X86 烟测夹具
-        run: |
-          set -euo pipefail
-          bash scripts/ci/test-smoke-x86.sh
 
       - name: Validate Config Audit Fixture / 校验配置审计夹具
         run: |

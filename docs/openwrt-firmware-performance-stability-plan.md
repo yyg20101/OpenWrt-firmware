@@ -35,7 +35,7 @@
 - `scripts/ci/audit-config.sh` 已检查 x86 分区、GRUB、irqbalance、BBR/SQM/CAKE/IFB、LuCI/uHTTPd/rpcd、Samba4/autosamba 互斥和 VM 镜像裁剪要求。
 - `.github/workflows/firmware-build.yml` 已包含缓存 restore/save、配置审计、依赖下载、编译 fallback、产物整理、Release 元数据。
 - `.github/workflows/optimization-health.yml` 已能生成 profile、matrix 和缓存健康报告。
-- `.github/workflows/cache-maintenance.yml` 已提供每日 Actions 存储维护入口，调用 `scripts/ci/actions-storage-maintenance.sh` 自动清理过期 Artifacts、旧 Cache 和历史 workflow runs；手动触发默认 dry-run，Cache 真实删除时仍要求指定 `prefix` 或 `ref`。
+- `.github/workflows/cache-maintenance.yml` 已提供每日 Actions 存储维护入口，调用 `scripts/ci/actions-storage-maintenance.sh` 自动清理过期 Artifacts、旧 Cache 和历史 workflow runs；手动触发只提供 `preview` 和固定策略的 `cleanup`。
 
 本计划基于以上能力继续推进，避免重复建设。
 
@@ -46,7 +46,7 @@ P0 的目标是让固件是否能稳定生成变得可验证、可复盘。P0 �
 | 任务 | 范围 | 预期改动 | 验收标准 |
 |------|------|----------|----------|
 | P0-01 上游漂移报告 | `devices/profiles.yml`、`scripts/ci/optimization-report.sh`、`.github/workflows/optimization-health.yml` | 在健康报告中列出每个 profile 的 `source_repo`、`source_branch`、当前远端 HEAD、最近构建使用的 source commit。 | 手动运行 Optimization Health 可以看到 profile 是否跟上游发生漂移；报告不触发构建、不修改缓存。 |
-| P0-02 x86 QEMU smoke | `scripts/ci/build-artifacts.sh` 或新增 `scripts/ci/smoke-x86.sh`、`.github/workflows/firmware-build.yml` | 对 x86 `combined.img.gz` 或 `combined-efi.img.gz` 做轻量启动验证，至少确认镜像可解压、分区可识别、启动流程进入 OpenWrt 早期日志。 | x86 构建成功后上传 smoke 日志；失败时构建失败并保留诊断 artifact。 |
+| P0-02 Release 资产校验 | `scripts/ci/build-artifacts.sh`、`.github/workflows/firmware-build.yml` | 构建后生成 `sha256sums.txt` 并发布固定 Release；验证 GitHub asset digest、checksum 文件和一个实际下载的小资产，不增加额外编译 gate。 | x86 Release 资产齐全，digest 与 `sha256sums.txt` 一致，小资产下载后校验通过。 |
 | P0-03 构建失败定位增强 | `scripts/ci/build-artifacts.sh` | 在失败上下文中记录失败包、最后 300 行日志、磁盘空间、内存、ccache 状态、OpenWrt target 信息。 | 编译失败 artifact 中能直接定位失败包或确认失败发生在工具链/下载/磁盘阶段。 |
 | P0-04 x86 配置守护补强 | `scripts/ci/audit-config.sh`、`scripts/ci/test-config-audit.sh` | 继续扩大 x86 effective config 审计，关注 rootfs 空间、EFI/legacy 启动、关键网卡、virtio、microcode、Samba4/autosamba 互斥。 | 本地 fixture 测试覆盖新增审计规则；x86 profile defconfig 后仍通过审计。 |
 
@@ -55,7 +55,7 @@ P0 推荐执行顺序：
 1. 先做 P0-01，因为它不会影响构建路径。
 2. 再做 P0-03，提高失败时的信息密度。
 3. 然后做 P0-04，把已确认的 x86 必备能力固化到审计。
-4. 最后做 P0-02，避免 smoke 误报影响现有构建成功率。
+4. 最后做 P0-02，确认发布和下载校验链路完整，但不增加额外编译 gate。
 
 ## 5. P1：编译加速与配置性能分层
 
@@ -77,7 +77,7 @@ P2 的目标是降低“本地无改动但构建结果变化”的风险，同�
 | 任务 | 范围 | 预期改动 | 验收标准 |
 |------|------|----------|----------|
 | P2-01 包 overlay 风险清单 | `scripts/common/Packages.sh`、Release metadata | 记录每个 overlay 仓库的 ref、commit、来源和失败重试次数。 | Release 或 artifact 中能看到包 overlay 来源；失败时可以判断是上游包变化还是本地配置问题。 |
-| P2-02 远程脚本风险跟踪 | `.github/workflows/firmware-build.yml`、文档 | 对 build environment 远程脚本记录下载 URL、下载时间，后续评估 checksum 或固定版本。 | 构建日志能说明 runner 初始化脚本来源；安全风险在文档中可见。 |
+| P2-02 远程脚本风险跟踪 | `.github/workflows/firmware-build.yml`、文档 | 对 build environment 远程脚本记录下载 URL、下载时间和 checksum，并通过每日构建持续验证兼容性。 | 构建日志能说明 runner 初始化脚本来源；安全风险和变更证据在文档中可见。 |
 | P2-03 Release/Artifact 合规检查 | `scripts/ci/optimization-report.sh`、`scripts/ci/build-artifacts.sh` | 持续检查 `Packages.tar.gz` 必须保留、VM 专用镜像必须裁剪、x86 raw 压缩镜像必须存在。 | `optimization-report.sh release <repo> <tag>` 能验证 Release 资产是否符合规则。 |
 | P2-04 维护策略固化 | `docs/ci-workflow-architecture.md`、`README.md`、本计划文档 | 把 cache maintenance、release maintenance、profile 修改流程写成固定运维节奏。 | 新增 profile 或触发全量构建前，有明确的健康报告、构建、清理 dry-run 顺序。 |
 | P2-05 PassWall 官方 tag 覆盖 | `scripts/common/Packages.sh`、`scripts/common/package` | 清理本地/feeds 冲突目录；依赖包仓按官方 `main` 刷新，`luci-app-passwall` 主仓强制拉取最新官方 tag。 | `validate-passwall-overlay.sh` 通过；包来源 manifest 记录官方仓库、ref 和 commit。 |
@@ -118,7 +118,7 @@ GitHub Actions 侧建议顺序：
 2. 触发 `Firmware CI` 的 `target=x86_64_all`，先验证两个 x86 profile。
 3. x86 稳定后再触发 `target=qualcommax_all`。
 4. 全部通过后再触发 `target=all`，并按需设置 `release=true`。
-5. 如 Actions 存储接近容量上限，先运行 `Cache Maintenance` dry-run，再按 `prefix` 或 `ref` 做真实 Cache 清理；过期 Artifacts 和历史 workflow runs 由每日维护任务自动清理。
+5. 如 Actions 存储接近容量上限，先运行 `Cache Maintenance` 的 `preview`，确认候选范围后运行固定策略的 `cleanup`；过期 Artifacts 和历史 workflow runs 由每日维护任务自动清理。
 
 ## 8. 风险与假设
 
@@ -126,9 +126,9 @@ GitHub Actions 侧建议顺序：
 |------|------|----------|
 | 上游源码和 feeds 跟随分支变化。 | 同一 profile 在不同时间构建结果不同。 | 保持 source commit、profile hash、包 overlay manifest 和漂移报告。 |
 | 插件体积持续增长。 | rootfs 可能逼近容量上限，尤其是 x86 以外目标。 | 不删必要插件；通过 rootfs 分区、配置分层和产物体积报告管理。 |
-| QEMU smoke 误报。 | 可能阻塞本来可用的固件产物。 | 先作为 x86 artifact 日志上传，稳定后再升级为强制 gate。 |
-| Actions 存储清理过度。 | 下次构建变慢，或缺少旧 workflow 日志。 | 真实 Cache 删除必须使用 `prefix` 或 `ref`；workflow run 清理保护当前 run、最新 firmware run 和每个 workflow 的最新运行。 |
-| runner 镜像或远程初始化脚本变化。 | 构建环境不可预测。 | 记录 runner、脚本来源和初始化日志，后续评估 checksum 或固定版本。 |
+| Release 上传或 checksum 校验失败。 | 固件可能已编译完成，但发布结果不能作为可下载版本验收。 | 保留编译日志和失败上下文；只在 asset digest、`sha256sums.txt` 和小资产下载校验一致后接受该 Release。 |
+| Actions 存储清理过度。 | 下次构建变慢，或缺少旧 workflow 日志。 | 手动清理先运行 `preview`；固定策略保护当前 run、最新 firmware run、每个 workflow 的近期运行和每组最新 Cache。 |
+| runner 镜像或远程初始化脚本变化。 | 构建环境不可预测。 | 记录 runner、脚本来源、初始化脚本 checksum 和构建日志，通过每日构建及时发现兼容性变化。 |
 
 ## 9. 完成定义
 

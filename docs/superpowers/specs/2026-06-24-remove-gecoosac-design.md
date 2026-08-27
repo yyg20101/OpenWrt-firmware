@@ -51,7 +51,7 @@ Remote validation must trigger:
 gh workflow run firmware-ci.yml --repo yyg20101/OpenWrt-firmware --ref main -f target=x86_64_LEDE -f release=true
 ```
 
-Success means the run reaches firmware artifact upload, x86 smoke, and `Publish GitHub Release`.
+Success means the run reaches firmware artifact upload and `Publish GitHub Release`, then passes Release digest, `sha256sums.txt`, and small-asset download verification.
 
 ## Risks
 

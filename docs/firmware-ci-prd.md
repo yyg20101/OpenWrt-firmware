@@ -34,7 +34,7 @@
   - x86 profiles are verified first with `target=x86_64_all` before broader profile groups are treated as stable.
   - Cache keys include source slug, branch, cache group, and the current monthly cache period; fallback restore can reuse earlier matching periods, and cache save runs only when the primary key is not an exact hit. `PROFILE_HASH` is retained for Release metadata and health reports.
   - `optimization-health.yml` can be manually run to generate read-only profile, matrix, and cache health reports.
-  - Cache maintenance uses dry-run by default, runs daily for Actions storage, and requires `prefix` or `ref` before deleting caches.
+  - Cache maintenance runs daily; manual dispatch defaults to `preview`, while `cleanup` uses the fixed `main` branch retention policy.
   - Release publishing is disabled by default and can be enabled per dispatch with `release=true`.
 
 - **Non-Goals**:
@@ -71,7 +71,7 @@
   - Workflow permissions are limited to `contents: write` and `actions: read` for build/release operations.
   - Release notes describe root password state, not plaintext passwords.
   - No custom secrets are required beyond GitHub-provided token context.
-  - Remote source, feed, and package repositories remain supply-chain dependencies and should be pinned in future hardening work.
+  - Remote source, feed, and package repositories remain mutable supply-chain dependencies; resolved refs and checksums must be recorded because the project intentionally follows updates instead of pinning versions.
 
 ### 5. Risks & Roadmap
 
@@ -79,8 +79,8 @@
   - MVP: Declarative profiles, dynamic matrix, reusable build workflow, profile validation, standardized Release metadata.
   - v1.1: Add fixture tests for `profiles.sh`, `config-feeds.sh`, `build-artifacts.sh`, and `release-maintenance.sh`; artifact/Release fixtures are partially implemented.
   - v1.2: Add read-only optimization health reporting for profiles, matrices, caches, and Release assets.
-  - v1.3: Use x86-first validation, cache dry-runs, and documented maintenance order before broad profile builds.
-  - v2.0: Optional scheduled update checks, package ref pinning, and per-profile build concurrency controls.
+  - v1.3: Use x86-first validation, cache previews, and documented maintenance order before broad profile builds.
+  - v2.0: Optional upstream compatibility reporting and per-profile build concurrency controls.
 
 - **Technical Risks**:
   - GitHub runner image changes can break OpenWrt build prerequisites.

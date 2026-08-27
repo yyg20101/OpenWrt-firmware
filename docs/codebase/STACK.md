@@ -15,7 +15,7 @@
 
 | Dependency | Version | Role in system | Evidence |
 |------------|---------|----------------|----------|
-| GitHub Actions | Action refs pinned in workflow files, for example `actions/checkout@v7`, `actions/cache@v6`, `actions/upload-artifact@v7` | CI orchestration, cache restore, artifact upload, optional Release publishing | `.github/workflows/firmware-build.yml`, `.github/workflows/ci-lint.yml` |
+| GitHub Actions | Major action refs, for example `actions/checkout@v7`, `actions/cache@v6`, `actions/upload-artifact@v7`, track compatible updates and are monitored by Dependabot | CI orchestration, cache restore, artifact upload, optional Release publishing | `.github/workflows/firmware-build.yml`, `.github/workflows/ci-lint.yml` |
 | OpenWrt/LEDE/ImmortalWrt source trees | Branches declared per profile | External firmware source cloned and compiled during workflow execution | `devices/profiles.yml` |
 | Debian/Ubuntu build packages | Runner package repository versions | Toolchain prerequisites for OpenWrt compilation | `.github/workflows/firmware-build.yml` |
 | OpenWrt feeds | Source-controlled by cloned OpenWrt tree | Package feed resolution for firmware builds | `.github/workflows/firmware-build.yml` |

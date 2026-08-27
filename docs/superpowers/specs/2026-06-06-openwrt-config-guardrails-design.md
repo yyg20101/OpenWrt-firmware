@@ -13,7 +13,7 @@
 - Requested LuCI application packages must not disappear after `make defconfig`; `config-audit/missing-luci-apps.txt` must be empty.
 - x86 config-audit artifacts show LuCI web availability: `luci-base`, at least one LuCI theme, `uHTTPd`, `uHTTPd ubus`, and `rpcd-mod-luci`.
 - x86 config-audit artifacts show Simplified Chinese support through `CONFIG_LUCI_LANG_zh_Hans=y` and `luci-i18n-base-zh-cn`.
-- `Firmware CI` with `target=x86_64_all` produces firmware artifacts whose checksums pass and whose smoke reports show `Static checks: passed`.
+- `Firmware CI` with `target=x86_64_all` produces Release assets whose GitHub digest, `sha256sums.txt`, and downloaded small-asset checksum agree.
 
 ## 2. User Experience & Functionality
 
@@ -58,9 +58,9 @@
 **Tool Requirements**:
 
 - Local repository inspection with `rg`, `git status`, and targeted file reads.
-- Local validators: `validate-profiles.sh`, `validate-luci-zh-cn-config.sh`, `validate-passwall-overlay.sh`, `test-config-audit.sh`, `test-config-feeds.sh`, `test-artifacts-release.sh`, `test-smoke-x86.sh`, `validate-cache-key-policy.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, and `validate-release-maintenance.sh`.
+- Local validators: `validate-profiles.sh`, `validate-luci-default-policy.sh`, `validate-passwall-overlay.sh`, `test-config-audit.sh`, `test-config-feeds.sh`, `test-artifacts-release.sh`, `validate-cache-key-policy.sh`, `validate-cache-maintenance.sh`, `test-optimization-report.sh`, and `validate-release-maintenance.sh`.
 - GitHub CLI access for `Firmware CI` run inspection, artifact inventory, and artifact download.
-- Artifact-level verification using `shasum -a 256 -c sha256sums.txt` and smoke/config-audit summaries.
+- Artifact-level verification using GitHub asset digests, `shasum -a 256 -c sha256sums.txt`, and an actual small-asset download.
 
 **Evaluation Strategy**:
 
@@ -82,7 +82,7 @@ Data flow:
 3. OpenWrt defconfig expands official package dependencies.
 4. `scripts/ci/audit-config.sh` inspects the effective config and writes config-audit artifacts.
 5. `scripts/ci/build-artifacts.sh` compiles firmware and writes manifests, provenance, size reports, and checksums.
-6. `scripts/ci/smoke-x86.sh` validates x86 image integrity and early boot evidence.
+6. Release verification compares GitHub asset digests with `sha256sums.txt` and validates one downloaded small asset.
 
 **Integration Points**:
 
@@ -98,7 +98,7 @@ Data flow:
 
 - Do not add secrets or credentials to config fragments, documentation, or artifact manifests.
 - Package overlay provenance must identify repositories, refs, tags, and commits, but not expose tokens.
-- Cache maintenance remains dry-run-first; real deletion requires explicit user approval and a concrete `ref` or `prefix`.
+- Cache maintenance remains preview-first; the explicit `cleanup` mode applies the fixed `main` branch retention policy.
 
 ## 5. Risks & Roadmap
 

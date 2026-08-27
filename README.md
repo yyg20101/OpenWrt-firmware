@@ -9,7 +9,7 @@
   - 手动触发参数：
     - `target`: 下拉选择单个 profile、`x86_64_all`、`qualcommax_all` 或 `all`
     - `release`: 是否发布 GitHub Release，默认不发布
-  - 定时触发：每日 04:00 Asia/Shanghai 自动构建 `x86_64_all`，并默认 `release=true`
+  - 定时触发：每日 04:00 Asia/Shanghai 固定构建 `x86_64_all`，无论上游是否变化都执行，并默认 `release=true`
   - 事件触发：`repository_dispatch`，事件类型为 `firmware-ci`
   - 只有单 profile 发布会标记为 GitHub Latest；分组或 `all` 发布不会覆盖 Latest 标记。
 
@@ -19,9 +19,9 @@
 
 - `Cache Maintenance`
   - 文件：`.github/workflows/cache-maintenance.yml`
-  - 每日自动清理 GitHub Actions Artifacts、Cache 和历史 workflow runs；手动触发默认 dry-run。
-  - Cache 真实删除时必须指定 `prefix` 或 `ref`，并默认只保留匹配范围内最新 1 个缓存。
-  - Artifact 和 workflow run 清理会保护最新 1 次产生 firmware 的 run，并清理过期的大体积构建/烟测产物与旧运行历史。
+  - 每日自动清理 GitHub Actions Artifacts、Cache 和历史 workflow runs。
+  - 手动触发仅提供 `preview` 和 `cleanup` 两种模式；默认 `preview` 不删除，`cleanup` 使用固定保留策略清理 `main` 分支缓存。
+  - Artifact 和 workflow run 清理会保护最新 1 次产生 firmware 的 run，并清理过期的大体积构建产物与旧运行历史。
 
 - `CI Lint`
   - 文件：`.github/workflows/ci-lint.yml`
@@ -73,7 +73,7 @@ my_profile:
 
 平台、源码系、设备族和性能优化差异继续通过 profile 的 `config_fragments` 追加，例如 `x86.config`、`x86-performance.config`、`qualcommax-ipq60xx.config`、`lede-extra.config`。x86 性能片段同时启用 Intel/AMD microcode，降低 CPU errata 和虚拟化/软路由场景下的稳定性风险。
 
-`make_compile_jobs` 是可选项。缺省时构建会使用 runner CPU 数；当某个上游源码或 profile 在 GitHub hosted runner 上容易因为内存压力失败时，为该 profile 设置较小的正整数。当前 `x86_64_immortalWrt` 使用 `make_compile_jobs: 2`，`x86_64_LEDE` 保持自动并行。
+`make_compile_jobs` 是可选项。缺省时构建会使用 runner CPU 数；只有在某个上游源码或 profile 明确存在内存压力时才设置较小的正整数。当前所有 profile 均使用自动并行。
 
 3. 运行本地校验：
 
@@ -105,7 +105,7 @@ bash scripts/ci/validate-dependabot-coverage.sh
 
 `Firmware Build` 使用两类缓存：`ccache` 和 build accelerator。Cache Key 保持按 cache 类型、版本、source slug、source branch、`cache_group` 隔离，并使用月度 `CACHE_PERIOD` 作为刷新周期，避免周序变化造成过多重复缓存。
 
-Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 primary key 非 exact hit 时执行。`Cache Maintenance` 每日自动清理过期 Artifacts、旧 Cache 和历史 workflow runs；容量接近上限时，先手动运行 dry-run，再按 `prefix` 或 `ref` 做真实 Cache 删除。
+Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 primary key 非 exact hit 时执行。`Cache Maintenance` 每日自动清理过期 Artifacts、旧 Cache 和历史 workflow runs；容量接近上限时，先手动运行 `preview`，确认候选范围后再运行 `cleanup`。
 
 ## Feeds and LuCI
 
@@ -115,17 +115,19 @@ Restore 仍保留同 source/branch/group 的前缀 fallback；save 只在 primar
 
 PassWall 使用显式 overlay：先清理本地/feeds 中冲突目录，`openwrt-passwall-packages` 跟随官方 `main`，`luci-app-passwall` 主仓强制拉取官方最新 tag。
 
+构建不固定或改写 dockerd/Moby 等 feed 包版本，也不固定上游 commit。每次任务直接拉取 profile 所选分支和 package overlay 最新规则对应的版本，并通过 source commit、package manifest 和 Release checksum 保留可追溯性。
+
 ## Operations Order
 
 优化或全量构建前建议按以下顺序执行：
 
 1. 手动运行 `Optimization Health`，确认 profile、上游漂移、matrix 和 cache 分组状态。
-2. 先触发 `Firmware CI` 的 `target=x86_64_all`，确认两个 x86 profile 生成 artifact 并通过 x86 smoke。
+2. 先触发 `Firmware CI` 的 `target=x86_64_all`，确认两个 x86 profile 生成 Artifact 和 Release assets。
 3. x86 稳定后再触发 `target=qualcommax_all` 或 `target=all`。
-4. Actions 存储由 `Cache Maintenance` 每日自动维护，覆盖 Artifacts、Cache 和历史 workflow runs；容量接近上限时，先运行 dry-run，再按 `prefix` 或 `ref` 做真实 Cache 删除，并保留匹配范围内最新缓存。
+4. Actions 存储由 `Cache Maintenance` 每日自动维护，覆盖 Artifacts、Cache 和历史 workflow runs；容量接近上限时，先运行 `preview`，再按固定策略运行 `cleanup`，并保留每组最新缓存。
 5. 后续需要验收固件产物的 `Firmware CI` 测试默认传入 `release=true`，让成功结果走 Release asset 上传路径；优先对单个 profile 做最终发布验证，分组或 `all` 发布不会抢占 GitHub Latest。
 
-每日自动构建由 `Firmware CI` 的 `schedule` 触发，默认构建 `x86_64_all` 并发布 Release assets。该任务用于持续验证 x86 LEDE 与 x86 ImmortalWrt 两个稳定 profile；Qualcommax 和 `all` 仍按需手动触发。
+每日自动构建由 `Firmware CI` 的 `schedule` 触发，默认构建 `x86_64_all` 并发布 Release assets。计划任务不再根据已有 Release 或上游 commit 跳过构建，每天都会实际执行 x86 LEDE 与 x86 ImmortalWrt；Qualcommax 和 `all` 仍按需手动触发。
 
 ## Release Contract
 
@@ -155,11 +157,10 @@ firmware-<profile>-<source-slug>-<branch>
 
 默认验证顺序：
 
-1. 用 `gh run view <run_id>` 确认 `Configure Firmware`、`Download Dependencies`、`Compile Firmware`、`Upload Firmware Artifact`、`Smoke X86 Artifact`、`Publish GitHub Release` 均成功。
-2. 下载并检查较小的 `config-audit-*`、`compile-log-*`、`smoke-x86-*` artifacts，确认 `missing-luci-apps.txt` 为空、compile log 无失败包、smoke summary 为 `Static checks: passed`。
-3. 用 `gh release view <tag> --json assets` 检查 Release assets，确认固件镜像、`Packages.tar.gz`、manifest、provenance、`compiled-luci-i18n-report.md`、`sha256sums.txt` 均已上传，并确认官方源的 `compiled-luci-i18n-report.md` 显示 `Packages.tar.gz luci-i18n-base-zh-cn: found`。
-4. 将 Release asset `digest` 与 `sha256sums.txt` 中对应文件的 sha256 对齐验证。
-5. 实际下载一个小资产，例如 `openwrt-x86-64-generic-kernel.bin`，运行 `shasum -a 256 -c sha256sums.txt --ignore-missing`，确认 checksum 流程可用。
+1. 用 `gh run view <run_id>` 确认 `Compile Firmware` 和 `Publish GitHub Release` 均成功；Actions Artifact 上传仍会默认执行，但配额或服务异常不会阻断编译与 Release。
+2. 用 `gh release view <tag> --json assets` 检查 Release assets，确认固件镜像、`Packages.tar.gz`、manifest、provenance、`compiled-luci-i18n-report.md`、`sha256sums.txt` 均已上传，并确认官方源的 `compiled-luci-i18n-report.md` 显示 `Packages.tar.gz luci-i18n-base-zh-cn: found`。
+3. 将 Release asset `digest` 与 `sha256sums.txt` 中对应文件的 sha256 对齐验证。
+4. 实际下载一个小资产，例如 `openwrt-x86-64-generic-kernel.bin`，运行 `shasum -a 256 -c sha256sums.txt --ignore-missing`，确认 checksum 流程可用。
 
 ## Documentation
 

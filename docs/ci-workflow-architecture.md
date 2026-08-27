@@ -43,9 +43,9 @@ This repository uses a declarative profile + reusable workflow structure for fir
   - Does not build firmware, publish releases, or delete caches.
 
 - `.github/workflows/cache-maintenance.yml`
-  - Manually lists or deletes GitHub Actions caches.
-  - Defaults to dry-run and keeps the newest two matched caches.
-  - Requires `prefix` or `ref` for real deletions.
+  - Runs daily cleanup for GitHub Actions artifacts, caches, and workflow runs.
+  - Manual dispatch exposes only `preview` and `cleanup`; `preview` is the default and never deletes data.
+  - `cleanup` uses the fixed `main` branch policy and keeps the newest cache in each source/profile cache group.
 
 - `.github/workflows/release-maintenance.yml`
   - Manually lists or deletes old GitHub Releases by tag prefix.
@@ -73,6 +73,8 @@ LEDE `master` and official ImmortalWrt `openwrt-25.12` include LuCI in their ups
 LEDE builds first seed the local package tree from `kenzok8/small` `master` in `all` mode, after removing matching local/feed package directories for that repository's package set. This supplies LEDE-oriented proxy packages such as SSR Plus, OpenClash, HomeProxy, Mihomo/MosDNS/Nikki, and related dependencies without applying the same feed to ImmortalWrt-family profiles.
 
 PassWall remains an explicit shared overlay after the LEDE `kenzok8/small` seed. `scripts/common/package` refreshes `Openwrt-Passwall/openwrt-passwall-packages` from `main` and pulls `Openwrt-Passwall/openwrt-passwall` through `UPDATE_PACKAGE_LATEST_TAG`, after removing conflicting local/feed directories.
+
+The build does not pin or rewrite dockerd/Moby or other feed package versions, and source repositories are not pinned to commits. Each run consumes the current selected branch or latest-tag policy and records the resolved source/package commits for traceability.
 
 Third-party LuCI apps that are not reliably present in the active official feeds can be handled by `scripts/common/package` overlays. Shared requested apps stay in `base.config`; LEDE-oriented apps such as OpenVPN stay in `lede-extra.config`. The build keeps a generic requested-vs-effective LuCI app audit after `make defconfig`, while avoiding a fixed required-plugin overlay whitelist so future plugin additions do not need a second policy list.
 
@@ -108,10 +110,7 @@ Profiles may also set `make_compile_jobs` directly to cap OpenWrt compile
 parallelism for source trees that are memory-sensitive on GitHub-hosted
 runners. When omitted, the build uses the runner CPU count.
 
-Current usage pattern:
-
-- `x86_64_immortalWrt` sets `make_compile_jobs: 2` because the source tree is more memory-sensitive on GitHub-hosted runners.
-- `x86_64_LEDE` leaves compile parallelism on auto because it has not needed a cap yet.
+All current profiles leave `make_compile_jobs` unset and use automatic compile parallelism.
 
 `scripts/ci/profiles.sh export-env` writes profile values to both `GITHUB_ENV` and `GITHUB_OUTPUT`, so shell steps and action expressions use the same resolved contract.
 
@@ -155,26 +154,25 @@ Optimization Health
 Use this flow before each optimization pass. The intended loop is:
 
 ```text
-health report -> config audit -> firmware build with release=true -> Release asset verification -> cache maintenance dry-run
+health report -> config audit -> firmware build with release=true -> Release asset verification -> cache maintenance preview
 ```
 
 Recommended operating order:
 
 1. Run `Optimization Health` first so profile drift, cache grouping, and matrix shape are visible before any build.
 2. Run `Firmware CI` for `target=x86_64_all` next and inspect both x86 profiles before widening to other targets.
-3. Run `Cache Maintenance` in dry-run mode before any real cache cleanup, and only delete within a bounded `prefix` or `ref`.
+3. Run `Cache Maintenance` in `preview` mode before selecting `cleanup`; cleanup uses the repository's fixed retention and `main` branch cache policy.
 4. For firmware output validation, pass `release=true` by default so the successful build exercises the Release asset upload path. Prefer a single selected profile for final publish verification; grouped targets may publish Release assets, but they do not take GitHub Latest.
 
-Daily scheduled builds follow the same release-verification path automatically. They build `x86_64_all` with `release=true`, covering the two stable x86 profiles while avoiding a daily full-platform Actions and Release asset load.
+Daily scheduled builds follow the same release-verification path automatically. They always build `x86_64_all` with `release=true`, even when the upstream commit and existing Release are unchanged, while avoiding a daily full-platform Actions and Release asset load.
 
 Default firmware verification uses the Release, not a full local download of the multi-GB firmware artifact:
 
-1. Confirm the run and build job conclude `success`, including `Upload Firmware Artifact`, `Smoke X86 Artifact`, and `Publish GitHub Release`.
-2. Download small diagnostic artifacts (`config-audit-*`, `compile-log-*`, `smoke-x86-*`) and verify config audit, compile log, and smoke summary.
-3. Inspect Release assets with `gh release view <tag> --json assets`.
-4. Compare firmware asset `digest` values from GitHub with the entries in `sha256sums.txt`.
-5. Download a small asset such as `openwrt-x86-64-generic-kernel.bin` and run `shasum -a 256 -c sha256sums.txt --ignore-missing` to prove the checksum path.
-6. Download full firmware images only for flash testing or targeted forensic checks.
+1. Confirm `Compile Firmware` and `Publish GitHub Release` succeed. Actions Artifact uploads are attempted by default but remain non-blocking so storage quota or service failures cannot prevent compilation and Release publishing.
+2. Inspect Release assets with `gh release view <tag> --json assets`.
+3. Compare firmware asset `digest` values from GitHub with the entries in `sha256sums.txt`.
+4. Download a small asset such as `openwrt-x86-64-generic-kernel.bin` and run `shasum -a 256 -c sha256sums.txt --ignore-missing` to prove the checksum path.
+5. Download full firmware images only for flash testing or targeted forensic checks.
 
 Release names and tags are stable per profile/source/branch. For example, `x86_64 LEDE / lede:master` uses `firmware-x86_64_LEDE-coolsnowwolf_lede-master`; a later successful build updates the same Release, removes old assets, uploads the new assets, and leaves the exact source commit and workflow run in the body.
 
@@ -234,9 +232,9 @@ Release names and tags are stable per profile/source/branch. For example, `x86_6
 - Run `scripts/ci/sync-workflow-target-options.sh` after changing enabled profiles or groups.
 - Keep long shell logic in `scripts/ci/*.sh`, not workflow YAML.
 - Preserve profile output names when refactoring cache, artifact, or Release behavior.
-- Keep cache deletion workflows filtered by `prefix` or `ref`; dry-run is the only broad mode.
+- Keep manual cache maintenance limited to `preview` and fixed-policy `cleanup`; review the preview before deletion.
 - Keep cache keys isolated by source slug, source branch, and `cache_group`; save only when the primary cache key is not an exact hit.
-- Treat `x86_64_all` as the preferred preflight target for build and smoke validation before broader profile groups.
+- Treat `x86_64_all` as the preferred build and Release verification target before broader profile groups.
 - Treat `release=true` as the default for firmware artifact validation so Release assets, asset digests, `sha256sums.txt`, and small-asset checksum checks are exercised.
 - Run local validation before pushing:
 
